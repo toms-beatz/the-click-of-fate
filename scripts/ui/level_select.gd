@@ -13,7 +13,6 @@ extends Control
 signal planet_selected(planet_index: int)
 
 ## Références UI
-@onready var back_button: Button = %BackButton
 @onready var currency_label: Label = %CurrencyLabel
 @onready var power_label: Label = %PowerLabel
 @onready var carousel_container: Control = %CarouselContainer
@@ -24,10 +23,15 @@ signal planet_selected(planet_index: int)
 @onready var recommended_power_label: Label = %RecommendedPowerLabel
 @onready var play_button: Button = %PlayButton
 @onready var difficulty_label: Label = %DifficultyLabel
+@onready var home_button: Button = %HomeButton
+@onready var shop_button: Button = %ShopButton
+@onready var profile_button: Button = %ProfileButton
 
 ## Scènes
 const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 const COMBAT_SCENE := "res://scenes/game_combat_scene.tscn"
+const SHOP_SCENE := "res://scenes/ui/shop_menu.tscn"
+const PROFILE_SCENE := "res://scenes/ui/profile_menu.tscn"
 
 ## Données des planètes
 const PLANETS_INFO := [
@@ -104,10 +108,12 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	back_button.pressed.connect(_on_back_pressed)
 	left_arrow.pressed.connect(_on_left_pressed)
 	right_arrow.pressed.connect(_on_right_pressed)
 	play_button.pressed.connect(_on_play_pressed)
+	home_button.pressed.connect(_on_home_pressed)
+	shop_button.pressed.connect(_on_shop_pressed)
+	profile_button.pressed.connect(_on_profile_pressed)
 	
 	if SaveManager:
 		SaveManager.currency_changed.connect(_on_currency_changed)
@@ -374,10 +380,22 @@ func _on_play_pressed() -> void:
 	get_tree().change_scene_to_file(COMBAT_SCENE)
 
 
-func _on_back_pressed() -> void:
-	_animate_button(back_button)
+func _on_home_pressed() -> void:
+	_animate_button(home_button)
 	await get_tree().create_timer(0.15).timeout
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+
+func _on_shop_pressed() -> void:
+	_animate_button(shop_button)
+	await get_tree().create_timer(0.15).timeout
+	get_tree().change_scene_to_file(SHOP_SCENE)
+
+
+func _on_profile_pressed() -> void:
+	_animate_button(profile_button)
+	await get_tree().create_timer(0.15).timeout
+	get_tree().change_scene_to_file(PROFILE_SCENE)
 
 
 ## Gestion du swipe tactile

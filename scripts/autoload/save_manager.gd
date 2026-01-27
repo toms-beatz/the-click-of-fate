@@ -73,6 +73,13 @@ func _initialize_default_data() -> void:
 			"dodge_chance": 0,
 			"attack_power": 0
 		},
+		"equipment": {
+			"weapon": "",       # ID de l'arme équipée
+			"armor": "",        # ID de l'armure équipée
+			"helmet": ""        # ID du casque équipé
+		},
+		"owned_equipment": [],  # Liste des équipements possédés
+		"boosters": [],         # Boosters actifs pour la prochaine partie
 		"statistics": {
 			"total_kills": 0,
 			"total_deaths": 0,
@@ -392,3 +399,67 @@ func set_current_planet(planet_index: int) -> void:
 	data["current_wave"] = 0  # Reset à la première vague
 	progression_changed.emit()
 	save_game()
+
+
+# ==================== ACCESSEURS ÉQUIPEMENT ====================
+
+## Retourne l'équipement actuellement équipé
+func get_equipped(slot: String) -> String:
+	return data["equipment"].get(slot, "")
+
+
+## Équipe un item dans un slot
+func equip_item(slot: String, item_id: String) -> void:
+	if data["equipment"].has(slot):
+		data["equipment"][slot] = item_id
+		save_game()
+
+
+## Déséquipe un slot
+func unequip_item(slot: String) -> void:
+	if data["equipment"].has(slot):
+		data["equipment"][slot] = ""
+		save_game()
+
+
+## Retourne la liste des équipements possédés
+func get_owned_equipment() -> Array:
+	return data.get("owned_equipment", [])
+
+
+## Vérifie si un équipement est possédé
+func owns_equipment(item_id: String) -> bool:
+	return item_id in get_owned_equipment()
+
+
+## Ajoute un équipement à l'inventaire
+func add_equipment(item_id: String) -> void:
+	if not owns_equipment(item_id):
+		data["owned_equipment"].append(item_id)
+		save_game()
+
+
+# ==================== ACCESSEURS BOOSTERS ====================
+
+## Retourne les boosters actifs
+func get_active_boosters() -> Array:
+	return data.get("boosters", [])
+
+
+## Ajoute un booster
+func add_booster(booster_id: String) -> void:
+	data["boosters"].append(booster_id)
+	save_game()
+
+
+## Consomme tous les boosters (après une partie)
+func consume_boosters() -> Array:
+	var boosters := get_active_boosters().duplicate()
+	data["boosters"] = []
+	save_game()
+	return boosters
+
+
+## Vérifie si un booster est actif
+func has_booster(booster_id: String) -> bool:
+	return booster_id in get_active_boosters()
