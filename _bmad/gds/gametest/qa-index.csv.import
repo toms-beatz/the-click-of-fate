@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://icna3an6oyva"
+
+[deps]
+
+files=["res://_bmad/gds/gametest/qa-index.name.translation", "res://_bmad/gds/gametest/qa-index.description.translation", "res://_bmad/gds/gametest/qa-index.tags.translation", "res://_bmad/gds/gametest/qa-index.fragment.translation"]
+
+source_file="res://_bmad/gds/gametest/qa-index.csv"
+dest_files=["res://_bmad/gds/gametest/qa-index.name.translation", "res://_bmad/gds/gametest/qa-index.description.translation", "res://_bmad/gds/gametest/qa-index.tags.translation", "res://_bmad/gds/gametest/qa-index.fragment.translation"]
+
+[params]
+
+compress=true
+delimiter=0
