@@ -349,3 +349,28 @@ func is_vibration_enabled() -> bool:
 func set_vibration_enabled(enabled: bool) -> void:
 	data["settings"]["vibration_enabled"] = enabled
 	save_game()
+
+
+## Retourne tous les settings
+func get_settings() -> Dictionary:
+	return data.get("settings", {})
+
+
+## Définit une valeur de setting générique
+func set_setting(key: String, value: Variant) -> void:
+	if data["settings"].has(key):
+		data["settings"][key] = value
+	save_game()
+
+
+## Retourne le plus haut niveau de planète complétée (-1 si aucune)
+func get_highest_planet_completed() -> int:
+	return data.get("highest_planet_completed", -1)
+
+
+## Définit la planète actuelle (pour la sélection de niveau)
+func set_current_planet(planet_index: int) -> void:
+	data["current_planet"] = clampi(planet_index, 0, 3)
+	data["current_wave"] = 0  # Reset à la première vague
+	progression_changed.emit()
+	save_game()
