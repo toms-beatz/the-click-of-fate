@@ -115,6 +115,10 @@ const VICTORY_BONUS := 100
 
 
 func _ready() -> void:
+	# Charger la planète sélectionnée depuis le SaveManager
+	if SaveManager:
+		current_planet = SaveManager.get_current_planet()
+	
 	_setup_background()
 	_setup_combat_zone()
 	_setup_systems()
@@ -1452,6 +1456,15 @@ func _show_game_over_screen(is_victory: bool) -> void:
 		next_btn.pressed.connect(_on_next_planet_pressed)
 		vbox.add_child(next_btn)
 	
+	# Bouton MENU - Retour au menu principal
+	var menu_btn := Button.new()
+	menu_btn.text = "MENU"
+	menu_btn.custom_minimum_size = Vector2(200, 55)
+	menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	menu_btn.add_theme_font_size_override("font_size", 20)
+	menu_btn.pressed.connect(_on_menu_pressed)
+	vbox.add_child(menu_btn)
+	
 	print("[GameOver] Screen created, buttons should be clickable")
 
 
@@ -1516,4 +1529,11 @@ func _on_retry_pressed() -> void:
 func _on_next_planet_pressed() -> void:
 	print("[NEXT] Button pressed!")
 	current_planet = mini(current_planet + 1, 3)
+	if SaveManager:
+		SaveManager.advance_planet()
 	get_tree().reload_current_scene()
+
+
+func _on_menu_pressed() -> void:
+	print("[MENU] Button pressed!")
+	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")

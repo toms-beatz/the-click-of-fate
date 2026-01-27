@@ -27,8 +27,7 @@ signal planet_selected(planet_index: int)
 
 ## Scènes
 const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
-## TODO: Sera défini après le merge du gameplay
-## const COMBAT_SCENE := "res://scenes/combat_scene.tscn"
+const COMBAT_SCENE := "res://scenes/game_combat_scene.tscn"
 
 ## Données des planètes
 const PLANETS_INFO := [
@@ -363,9 +362,8 @@ func _on_play_pressed() -> void:
 	await get_tree().create_timer(0.2).timeout
 	planet_selected.emit(current_index)
 	
-	# TODO: Charger la scène de combat après merge du gameplay
-	# get_tree().change_scene_to_file(COMBAT_SCENE)
-	print("[LevelSelect] Planète sélectionnée: %s (index %d) - En attente du gameplay" % [PLANETS_INFO[current_index]["name"], current_index])
+	# Charger la scène de combat
+	get_tree().change_scene_to_file(COMBAT_SCENE)
 
 
 func _on_back_pressed() -> void:
