@@ -51,7 +51,7 @@ text = "←"
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 26
-text = "SÉLECTION"
+text = "SELECT PLANET"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -67,7 +67,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(1, 0.8, 0.3, 1)
-text = "⚔ 50"
+text = "⚔ 100"
 
 [node name="CurrencyPanel" type="PanelContainer" parent="SafeAreaMargin/MainVBox/TopBar/StatsPanel"]
 layout_mode = 2
@@ -118,7 +118,7 @@ theme_override_constants/separation = 12
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 36
-text = "Mercure"
+text = "Mercury"
 horizontal_alignment = 1
 
 [node name="DifficultyLabel" type="Label" parent="SafeAreaMargin/MainVBox/PlanetInfoSection"]
@@ -134,14 +134,14 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-text = "Ennemis rapides et agressifs"
+text = "Fast and aggressive enemies"
 horizontal_alignment = 1
 
 [node name="RecommendedPowerLabel" type="Label" parent="SafeAreaMargin/MainVBox/PlanetInfoSection"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Puissance recommandée: 50"
+text = "Recommended Power: 100"
 horizontal_alignment = 1
 
 [node name="ButtonSection" type="VBoxContainer" parent="SafeAreaMargin/MainVBox"]
@@ -153,11 +153,11 @@ unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 65)
 theme_override_font_sizes/font_size = 26
-text = "▶ JOUER"
+text = "▶ PLAY"
 
 [node name="SwipeHint" type="Label" parent="SafeAreaMargin/MainVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
-text = "← Glissez pour changer de planète →"
+text = "← Swipe to change planet →"
 horizontal_alignment = 1

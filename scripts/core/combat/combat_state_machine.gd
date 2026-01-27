@@ -63,10 +63,13 @@ func _ready() -> void:
 
 
 ## Connecte le PressureGauge pour gérer les transitions de punition
+## NOTE: On ne change plus l'état global car l'overload est maintenant par action
 func connect_pressure_gauge(gauge: PressureGauge) -> void:
 	pressure_gauge = gauge
-	pressure_gauge.punishment_started.connect(_on_punishment_started)
-	pressure_gauge.punishment_ended.connect(_on_punishment_ended)
+	# Ne plus écouter les signaux de punition globale
+	# Le blocage est maintenant géré par action dans le ClickZoneButton
+	# pressure_gauge.punishment_started.connect(_on_punishment_started)
+	# pressure_gauge.punishment_ended.connect(_on_punishment_ended)
 
 
 ## Démarre le combat (appelé pour lancer une vague)

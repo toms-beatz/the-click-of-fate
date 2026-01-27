@@ -74,7 +74,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "🎵 Musique"
+text = "🎵 Music"
 
 [node name="MusicValueLabel" type="Label" parent="SafeAreaMargin/MainVBox/SettingsContainer/MusicSection/MusicHeader"]
 unique_name_in_owner = true
@@ -103,7 +103,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "🔊 Effets sonores"
+text = "🔊 Sound Effects"
 
 [node name="SFXValueLabel" type="Label" parent="SafeAreaMargin/MainVBox/SettingsContainer/SFXSection/SFXHeader"]
 unique_name_in_owner = true
@@ -128,7 +128,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
-text = "📳 Vibrations"
+text = "📳 Vibration"
 
 [node name="VibrationToggle" type="CheckButton" parent="SafeAreaMargin/MainVBox/SettingsContainer/VibrationSection"]
 unique_name_in_owner = true

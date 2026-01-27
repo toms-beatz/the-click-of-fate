@@ -196,6 +196,16 @@ func get_currency() -> int:
 	return data.get("currency_sc", 0)
 
 
+## Monnaie au début de la session (pour restore on retry)
+var _session_start_currency: int = 0
+
+
+## Marque le début d'une session de jeu (appelé au début de chaque partie)
+func start_session() -> void:
+	_session_start_currency = get_currency()
+	print("[SaveManager] Session started with %d SC" % _session_start_currency)
+
+
 ## Ajoute de la monnaie
 func add_currency(amount: int) -> void:
 	data["currency_sc"] = get_currency() + amount
@@ -204,7 +214,15 @@ func add_currency(amount: int) -> void:
 	save_game()
 
 
-## Réinitialise la monnaie à 0 (pour retry)
+## Restaure la monnaie au début de la session (pour retry)
+func restore_session_currency() -> void:
+	data["currency_sc"] = _session_start_currency
+	currency_changed.emit(_session_start_currency)
+	save_game()
+	print("[SaveManager] Currency restored to session start: %d SC" % _session_start_currency)
+
+
+## Réinitialise la monnaie à 0 (legacy)
 func reset_currency() -> void:
 	data["currency_sc"] = 0
 	currency_changed.emit(0)

@@ -33,39 +33,39 @@ const COMBAT_SCENE := "res://scenes/game_combat_scene.tscn"
 const PLANETS_INFO := [
 	{
 		"id": "mercury",
-		"name": "Mercure",
-		"description": "Ennemis rapides et agressifs",
+		"name": "Mercury",
+		"description": "Fast and aggressive enemies",
 		"color": Color(0.9, 0.4, 0.1),
 		"bg_color": Color(0.3, 0.15, 0.05),
 		"difficulty": 1,
-		"recommended_power": 50
+		"recommended_power": 100
 	},
 	{
 		"id": "venus",
-		"name": "Vénus",
-		"description": "Ennemis toxiques et persistants",
+		"name": "Venus",
+		"description": "Toxic and persistent enemies",
 		"color": Color(0.9, 0.75, 0.2),
 		"bg_color": Color(0.3, 0.25, 0.05),
 		"difficulty": 2,
-		"recommended_power": 150
+		"recommended_power": 140
 	},
 	{
 		"id": "mars",
 		"name": "Mars",
-		"description": "Ennemis régénérants",
+		"description": "Regenerating enemies",
 		"color": Color(0.85, 0.25, 0.15),
 		"bg_color": Color(0.25, 0.08, 0.05),
 		"difficulty": 3,
-		"recommended_power": 300
+		"recommended_power": 190
 	},
 	{
 		"id": "earth",
-		"name": "Terre",
-		"description": "Ennemis résistants - Combat Final",
+		"name": "Earth",
+		"description": "Final Battle - Dr. Mortis awaits",
 		"color": Color(0.2, 0.6, 0.9),
 		"bg_color": Color(0.05, 0.15, 0.25),
 		"difficulty": 4,
-		"recommended_power": 500
+		"recommended_power": 270
 	}
 ]
 
@@ -133,21 +133,24 @@ func _on_currency_changed(_new_amount: int) -> void:
 	_update_displays()
 
 
-## Calcule la puissance du joueur basée sur ses upgrades
+## Calcule la puissance du joueur basée sur la progression (comme dans le combat)
 func _calculate_player_power() -> int:
 	if not SaveManager:
-		return 50  # Valeur de base
+		return 100  # Valeur de base
 	
-	# Puissance de base
-	var base_power := 50
+	# Utiliser le même système que le combat
+	var highest_completed: int = SaveManager.get_highest_planet_completed()
 	
-	# Bonus des upgrades (chaque niveau donne des points de puissance)
-	var heal_bonus := SaveManager.get_upgrade_level("heal_power") * 10
-	var hp_bonus := SaveManager.get_upgrade_level("max_hp") * 15
-	var dodge_bonus := SaveManager.get_upgrade_level("dodge_chance") * 8
-	var attack_bonus := SaveManager.get_upgrade_level("attack_power") * 12
+	# Puissance par planète complétée (aligné avec HERO_POWER_PER_PLANET dans game_combat_scene)
+	var power_table := {
+		-1: 100,   # Aucune planète terminée
+		0: 150,    # Mercury terminée
+		1: 200,    # Venus terminée
+		2: 280,    # Mars terminée
+		3: 400,    # Earth terminée (max)
+	}
 	
-	return base_power + heal_bonus + hp_bonus + dodge_bonus + attack_bonus
+	return power_table.get(highest_completed, 100)
 
 
 func _create_planet_carousel() -> void:
@@ -284,6 +287,7 @@ func _update_carousel_positions(animate: bool = true) -> void:
 func _update_planet_info_display() -> void:
 	var info: Dictionary = PLANETS_INFO[current_index]
 	var is_unlocked: bool = current_index <= _get_highest_completed() + 1
+	var is_completed: bool = current_index <= _get_highest_completed()
 	var player_power := _calculate_player_power()
 	var recommended: int = info["recommended_power"]
 	
@@ -292,7 +296,7 @@ func _update_planet_info_display() -> void:
 		planet_name_label.text = info["name"]
 	
 	if planet_desc_label:
-		planet_desc_label.text = info["description"] if is_unlocked else "🔒 Planète verrouillée"
+		planet_desc_label.text = info["description"] if is_unlocked else "🔒 Locked Planet"
 	
 	# Difficulté
 	if difficulty_label:
@@ -301,7 +305,7 @@ func _update_planet_info_display() -> void:
 	# Puissance recommandée avec couleur selon notre niveau
 	if recommended_power_label:
 		if is_unlocked:
-			recommended_power_label.text = "Puissance recommandée: %d" % recommended
+			recommended_power_label.text = "Recommended Power: %d" % recommended
 			if player_power >= recommended:
 				recommended_power_label.add_theme_color_override("font_color", Color.GREEN)
 			elif player_power >= recommended * 0.7:
@@ -309,13 +313,17 @@ func _update_planet_info_display() -> void:
 			else:
 				recommended_power_label.add_theme_color_override("font_color", Color.ORANGE_RED)
 		else:
-			recommended_power_label.text = "Terminez %s pour débloquer" % PLANETS_INFO[maxi(0, current_index - 1)]["name"]
+			recommended_power_label.text = "Complete %s to unlock" % PLANETS_INFO[maxi(0, current_index - 1)]["name"]
 			recommended_power_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	
-	# Bouton jouer
+	# Bouton jouer - PLAY ou REPLAY selon si complété
 	if play_button:
 		play_button.visible = is_unlocked
 		play_button.disabled = not is_unlocked
+		if is_completed:
+			play_button.text = "🔄 REPLAY"
+		else:
+			play_button.text = "▶ PLAY"
 	
 	# Flèches de navigation
 	if left_arrow:

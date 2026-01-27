@@ -72,10 +72,25 @@ var current_wave: int = 1
 var total_waves: int = 5
 var enemies_in_wave: int = 3
 var is_game_over: bool = false
+var coins_earned_this_run: int = 0  # Coins gagnés pendant cette partie
 
 ## Game Over UI
 var game_over_panel: PanelContainer
 var stats_container: VBoxContainer
+
+## Pause Menu
+var pause_panel: Control
+var is_paused: bool = false
+
+## Boss System
+var is_boss_wave: bool = false
+var current_boss: BaseEnemy = null
+var boss_visual: Control = null
+
+## Cinematic System
+var cinematic_layer: CanvasLayer
+var is_showing_cinematic: bool = true
+var cinematic_slide_index: int = 0
 
 ## Hero Sprite System
 var hero_sprite: TextureRect
@@ -103,6 +118,68 @@ const PLANET_ENEMY_MULTIPLIERS := {
 	3: {"hp": 1.5, "atk": 1.3, "speed": 0.7, "name": "Titan"},  # Earth - boss-like
 }
 
+## Scaling de puissance du joueur par planète complétée
+## Le héros gagne de la puissance en progressant
+const HERO_POWER_PER_PLANET := {
+	-1: {"hp_mult": 1.0, "atk_mult": 1.0, "power": 100},     # Aucune planète terminée (débutant)
+	0:  {"hp_mult": 1.25, "atk_mult": 1.2, "power": 150},   # Mercury terminée
+	1:  {"hp_mult": 1.5, "atk_mult": 1.4, "power": 200},    # Venus terminée  
+	2:  {"hp_mult": 1.8, "atk_mult": 1.7, "power": 280},    # Mars terminée
+	3:  {"hp_mult": 2.2, "atk_mult": 2.0, "power": 400},    # Earth terminée (max)
+}
+
+## Puissance recommandée par planète (pour info joueur)
+const PLANET_RECOMMENDED_POWER := {
+	0: 100,   # Mercury - niveau débutant
+	1: 140,   # Venus - après Mercury
+	2: 190,   # Mars - après Venus
+	3: 270,   # Earth - après Mars
+}
+
+## Boss par planète (après les 5 vagues)
+const PLANET_BOSSES := {
+	0: {"name": "Mercury Guardian", "hp": 400, "atk": 20, "speed": 1.0, "color": Color(1.0, 0.5, 0.2), "emoji": "🛡️", "special": "shield"},
+	1: {"name": "Venus Queen", "hp": 550, "atk": 25, "speed": 0.9, "color": Color(0.8, 0.9, 0.2), "emoji": "👑", "special": "poison"},
+	2: {"name": "Mars Warlord", "hp": 700, "atk": 30, "speed": 0.8, "color": Color(0.9, 0.4, 0.3), "emoji": "⚔️", "special": "rage"},
+	3: {"name": "DR. MORTIS", "hp": 1500, "atk": 40, "speed": 0.6, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},  # BOSS FINAL!
+}
+
+## Cinématique de fin (après avoir battu Dr. Mortis)
+const ENDING_CINEMATIC := [
+	{"text": "It's over. Dr. Mortis lies defeated at my feet.", "emoji": "💀"},
+	{"text": "But as life fades from his eyes, he laughs...", "emoji": "😈"},
+	{"text": "'You fool... I was just ONE of them. The Council... they ordered it all.'", "emoji": "🗣️"},
+	{"text": "A Council? More humans responsible for my family's death?", "emoji": "😠"},
+	{"text": "'They're everywhere... hiding in the outer colonies... you'll never find them all...'", "emoji": "🌌"},
+	{"text": "I WILL find them. Every. Single. One.", "emoji": "🔥"},
+	{"text": "My journey is not over. It has only just begun.", "emoji": "🚀"},
+	{"text": "TO BE CONTINUED...", "emoji": "⏳"},
+]
+
+## Cinématiques par planète
+const PLANET_CINEMATICS := {
+	0: [  # Mercury
+		{"text": "My name is Zyx-7. I had a family once... a beautiful colony on the outer rim.", "emoji": "👽"},
+		{"text": "Until HE came. Dr. Mortis. A human scientist who destroyed everything I loved.", "emoji": "💔"},
+		{"text": "Now I hunt him across the stars. Mercury is my first stop...", "emoji": "🚀"},
+	],
+	1: [  # Venus
+		{"text": "Mercury's colony knew nothing. But they mentioned Venus...", "emoji": "🔍"},
+		{"text": "Dr. Mortis has been building something here. Toxic experiments.", "emoji": "☠️"},
+		{"text": "I will tear through his creations until I find him.", "emoji": "😤"},
+	],
+	2: [  # Mars
+		{"text": "Venus was another dead end. But I found records... Mars.", "emoji": "📜"},
+		{"text": "His main research facility. Where he perfected his weapons.", "emoji": "🔬"},
+		{"text": "The weapons he used on my family. He WILL pay.", "emoji": "🔥"},
+	],
+	3: [  # Earth
+		{"text": "This is it. Earth. His homeworld. His fortress.", "emoji": "🌍"},
+		{"text": "Dr. Mortis is here. I can feel it. After all these years...", "emoji": "👁️"},
+		{"text": "Today, my family will be avenged. Today, HE DIES.", "emoji": "💀"},
+	],
+}
+
 ## Scaling par vague
 const WAVE_HP_SCALING := 1.15  # +15% HP par vague
 const WAVE_ATK_SCALING := 1.1  # +10% ATK par vague
@@ -118,6 +195,9 @@ func _ready() -> void:
 	# Charger la planète sélectionnée depuis le SaveManager
 	if SaveManager:
 		current_planet = SaveManager.get_current_planet()
+		# Marquer le début de la session pour pouvoir restore on retry
+		SaveManager.start_session()
+		coins_earned_this_run = 0
 	
 	_setup_background()
 	_setup_combat_zone()
@@ -125,12 +205,17 @@ func _ready() -> void:
 	_setup_hero()
 	_setup_hud()
 	_setup_effects_layer()
+	_setup_pause_menu()
 	_connect_signals()
 	
-	# Démarrer le combat
-	await get_tree().create_timer(0.5).timeout
-	_spawn_wave()
-	state_machine.start_combat()
+	# Afficher la cinématique avant le combat
+	_show_cinematic()
+
+
+func _input(event: InputEvent) -> void:
+	# Gestion de la touche pause (Escape ou bouton retour Android)
+	if event.is_action_pressed("ui_cancel") and not is_game_over and not is_showing_cinematic:
+		_toggle_pause()
 
 
 # ==================== SETUP BACKGROUND ====================
@@ -195,33 +280,35 @@ func _setup_combat_zone() -> void:
 	combat_zone.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(combat_zone)
 	
-	# Container pour le héros (côté gauche)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	
+	# Container pour le héros (côté gauche - 12% de la largeur)
 	hero_container = Control.new()
 	hero_container.name = "HeroContainer"
-	hero_container.position = Vector2(80, 450)
+	hero_container.position = Vector2(viewport_size.x * 0.12, viewport_size.y * 0.35)
 	combat_zone.add_child(hero_container)
 	
-	# Container pour les ennemis (côté droit)
+	# Container pour les ennemis (côté droit - 70% de la largeur)
 	enemy_container = Control.new()
 	enemy_container.name = "EnemyContainer"
-	enemy_container.position = Vector2(500, 400)
+	enemy_container.position = Vector2(viewport_size.x * 0.70, viewport_size.y * 0.31)
 	combat_zone.add_child(enemy_container)
 	
-	# Sol/Platform visuel
+	# Sol/Platform visuel (couvre toute la largeur)
 	var ground := ColorRect.new()
 	ground.name = "Ground"
 	ground.color = Color(0.1, 0.08, 0.06, 0.8)
-	ground.size = Vector2(720, 150)
-	ground.position = Vector2(0, 700)
+	ground.size = Vector2(viewport_size.x, viewport_size.y * 0.12)
+	ground.position = Vector2(0, viewport_size.y * 0.55)
 	combat_zone.add_child(ground)
 	
-	# Ligne de séparation combat
+	# Ligne de séparation combat (au centre)
 	var battle_line := ColorRect.new()
 	battle_line.name = "BattleLine"
 	battle_line.color = PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).accent
 	battle_line.color.a = 0.3
-	battle_line.size = Vector2(2, 300)
-	battle_line.position = Vector2(359, 400)
+	battle_line.size = Vector2(2, viewport_size.y * 0.23)
+	battle_line.position = Vector2(viewport_size.x * 0.5, viewport_size.y * 0.31)
 	combat_zone.add_child(battle_line)
 
 
@@ -250,14 +337,25 @@ func _setup_hero() -> void:
 	hero = AlienHero.new()
 	hero.name = "AlienHero"
 	
+	# Calculer la puissance du héros basée sur la progression
+	var highest_completed: int = -1
+	if SaveManager:
+		highest_completed = SaveManager.get_highest_planet_completed()
+	
+	var power_data: Dictionary = HERO_POWER_PER_PLANET.get(highest_completed, HERO_POWER_PER_PLANET[-1])
+	var hp_mult: float = power_data.hp_mult
+	var atk_mult: float = power_data.atk_mult
+	
 	var hero_stats := EntityStats.new()
 	hero_stats.display_name = "Alien Hero"
-	hero_stats.max_hp = HERO_BASE_HP
-	hero_stats.attack = HERO_BASE_ATTACK
+	hero_stats.max_hp = int(HERO_BASE_HP * hp_mult)
+	hero_stats.attack = int(HERO_BASE_ATTACK * atk_mult)
 	hero_stats.attack_speed = HERO_ATTACK_SPEED
 	hero_stats.crit_chance = HERO_CRIT_CHANCE
 	hero_stats.dodge_chance = HERO_DODGE_CHANCE
 	hero.base_stats = hero_stats
+	
+	print("[GameCombat] Hero power level: %d (completed planet %d) - HP: %d, ATK: %d" % [power_data.power, highest_completed, hero_stats.max_hp, hero_stats.attack])
 	
 	hero_container.add_child(hero)
 	combat_manager.hero = hero
@@ -278,30 +376,35 @@ func _create_hero_visual() -> void:
 	visual.name = "HeroVisual"
 	hero.add_child(visual)
 	
-	# Sprite principal du héros
+	# Sprite principal du héros (taille relative au viewport)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var sprite_width: int = mini(150, int(viewport_size.x * 0.20))  # Max 20% de la largeur
+	var sprite_height := sprite_width * 1.2  # Ratio 1.2 pour le héros
+	
 	hero_sprite = TextureRect.new()
 	hero_sprite.name = "HeroSprite"
 	hero_sprite.texture = hero_textures.get(HeroPose.IDLE)
 	hero_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	hero_sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	hero_sprite.custom_minimum_size = Vector2(150, 180)
-	hero_sprite.size = Vector2(150, 180)
-	hero_sprite.position = Vector2(-75, -180)
+	hero_sprite.custom_minimum_size = Vector2(sprite_width, sprite_height)
+	hero_sprite.size = Vector2(sprite_width, sprite_height)
+	hero_sprite.position = Vector2(float(-sprite_width) * 0.5, float(-sprite_height))
 	visual.add_child(hero_sprite)
 	
 	# Barre de vie au-dessus du héros
+	var hp_bar_width: int = int(sprite_width * 0.65)
 	var hp_bg := ColorRect.new()
 	hp_bg.name = "HPBackground"
 	hp_bg.color = Color(0.1, 0.1, 0.1, 0.8)
-	hp_bg.size = Vector2(100, 12)
-	hp_bg.position = Vector2(-50, -195)
+	hp_bg.size = Vector2(hp_bar_width, 12)
+	hp_bg.position = Vector2(float(-hp_bar_width) * 0.5, float(-sprite_height) - 15)
 	visual.add_child(hp_bg)
 	
 	var hp_fill := ColorRect.new()
 	hp_fill.name = "HPFill"
 	hp_fill.color = Color(0.2, 0.9, 0.3)
-	hp_fill.size = Vector2(98, 10)
-	hp_fill.position = Vector2(-49, -194)
+	hp_fill.size = Vector2(hp_bar_width - 2, 10)
+	hp_fill.position = Vector2(float(-hp_bar_width) * 0.5 + 1, float(-sprite_height) - 14)
 	visual.add_child(hp_fill)
 
 
@@ -362,14 +465,14 @@ func _create_top_hud(parent: Control) -> void:
 	var top_bar := MarginContainer.new()
 	top_bar.name = "TopBar"
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_bar.custom_minimum_size.y = 140
-	top_bar.add_theme_constant_override("margin_left", 15)
-	top_bar.add_theme_constant_override("margin_right", 15)
-	top_bar.add_theme_constant_override("margin_top", 35)
+	top_bar.custom_minimum_size.y = 120  # Réduit de 140
+	top_bar.add_theme_constant_override("margin_left", 10)
+	top_bar.add_theme_constant_override("margin_right", 10)
+	top_bar.add_theme_constant_override("margin_top", 25)  # Réduit pour safe area
 	parent.add_child(top_bar)
 	
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 15)
+	hbox.add_theme_constant_override("separation", 10)  # Réduit
 	top_bar.add_child(hbox)
 	
 	# Section Héros (gauche) - avec stats détaillées
@@ -391,10 +494,11 @@ func _create_top_hud(parent: Control) -> void:
 	hero_hp_bar.name = "HeroHPBar"
 	hero_section.add_child(hero_hp_bar)
 	
-	# Stats du héros sous la barre de vie
+	# Stats du héros sous la barre de vie (utilise les vraies stats calculées)
 	var hero_stats_label := Label.new()
 	hero_stats_label.name = "HeroStatsLabel"
-	hero_stats_label.text = "ATK: %d | SPD: %.1f | CRIT: %d%%" % [HERO_BASE_ATTACK, HERO_ATTACK_SPEED, int(HERO_CRIT_CHANCE * 100)]
+	var real_atk: int = hero.base_stats.attack if hero and hero.base_stats else HERO_BASE_ATTACK
+	hero_stats_label.text = "ATK: %d | SPD: %.1f | CRIT: %d%%" % [real_atk, HERO_ATTACK_SPEED, int(HERO_CRIT_CHANCE * 100)]
 	hero_stats_label.add_theme_font_size_override("font_size", 10)
 	hero_stats_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6))
 	hero_section.add_child(hero_stats_label)
@@ -412,6 +516,28 @@ func _create_top_hud(parent: Control) -> void:
 	planet_label.add_theme_font_size_override("font_size", 16)
 	planet_label.add_theme_color_override("font_color", PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).accent)
 	center_section.add_child(planet_label)
+	
+	# Affichage puissance recommandée vs puissance du joueur
+	var recommended_power: int = PLANET_RECOMMENDED_POWER.get(current_planet, 100)
+	var highest_completed: int = -1
+	if SaveManager:
+		highest_completed = SaveManager.get_highest_planet_completed()
+	var player_power: int = HERO_POWER_PER_PLANET.get(highest_completed, HERO_POWER_PER_PLANET[-1]).power
+	
+	var power_label := Label.new()
+	power_label.name = "PowerLabel"
+	var power_color: Color
+	if player_power >= recommended_power:
+		power_color = Color(0.3, 1.0, 0.5)  # Vert - bon niveau
+	elif player_power >= recommended_power * 0.8:
+		power_color = Color(1.0, 0.9, 0.3)  # Jaune - faisable
+	else:
+		power_color = Color(1.0, 0.4, 0.3)  # Rouge - difficile
+	power_label.text = "⚡ %d / %d" % [player_power, recommended_power]
+	power_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	power_label.add_theme_font_size_override("font_size", 12)
+	power_label.add_theme_color_override("font_color", power_color)
+	center_section.add_child(power_label)
 	
 	wave_label = Label.new()
 	wave_label.text = "⚔️ WAVE %d / %d" % [current_wave, total_waves]
@@ -457,6 +583,24 @@ func _create_top_hud(parent: Control) -> void:
 	currency_label.add_theme_font_size_override("font_size", 16)
 	currency_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	parent.add_child(currency_label)
+	
+	# Bouton Pause (coin supérieur droit)
+	var pause_btn := Button.new()
+	pause_btn.name = "PauseButton"
+	pause_btn.text = "⏸️"
+	pause_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	pause_btn.position = Vector2(-50, 5)
+	pause_btn.custom_minimum_size = Vector2(40, 40)
+	
+	var pause_style := StyleBoxFlat.new()
+	pause_style.bg_color = Color(0.2, 0.2, 0.3, 0.8)
+	pause_style.border_color = Color(0.5, 0.5, 0.6)
+	pause_style.set_border_width_all(2)
+	pause_style.set_corner_radius_all(8)
+	pause_btn.add_theme_stylebox_override("normal", pause_style)
+	pause_btn.add_theme_font_size_override("font_size", 20)
+	pause_btn.pressed.connect(_toggle_pause)
+	parent.add_child(pause_btn)
 
 
 func _create_pressure_display(parent: Control) -> void:
@@ -507,30 +651,30 @@ func _create_pressure_bar_with_icon(parent: HBoxContainer, action: StringName, i
 func _create_bottom_hud(parent: Control) -> void:
 	var bottom_container := VBoxContainer.new()
 	bottom_container.name = "BottomContainer"
-	bottom_container.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom_container.position.y = -250
-	bottom_container.add_theme_constant_override("separation", 15)
+	bottom_container.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	bottom_container.anchor_top = 0.78  # Commence à 78% de l'écran (adapté à la hauteur)
+	bottom_container.add_theme_constant_override("separation", 10)
 	parent.add_child(bottom_container)
 	
 	# Barre de skills
 	var skill_bar := _create_skill_bar()
 	bottom_container.add_child(skill_bar)
 	
-	# Spacer
+	# Spacer flexible
 	var spacer := Control.new()
-	spacer.custom_minimum_size.y = 10
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bottom_container.add_child(spacer)
 	
 	# Bouton Click Zone tripartite
 	var click_margin := MarginContainer.new()
-	click_margin.add_theme_constant_override("margin_left", 20)
-	click_margin.add_theme_constant_override("margin_right", 20)
-	click_margin.add_theme_constant_override("margin_bottom", 30)
+	click_margin.add_theme_constant_override("margin_left", 15)
+	click_margin.add_theme_constant_override("margin_right", 15)
+	click_margin.add_theme_constant_override("margin_bottom", 20)
 	bottom_container.add_child(click_margin)
 	
 	click_zone_button = ClickZoneButton.new()
 	click_zone_button.name = "ClickZoneButton"
-	click_zone_button.custom_minimum_size = Vector2(680, 130)
+	click_zone_button.custom_minimum_size = Vector2(0, 110)  # Hauteur minimale, largeur flexible
 	click_zone_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	click_zone_button.heal_color = Color(0.15, 0.5, 0.8, 0.9)
 	click_zone_button.dodge_color = Color(0.6, 0.35, 0.9, 0.9)  # Violet pour Dodge
@@ -577,7 +721,8 @@ func _create_skill_bar() -> HBoxContainer:
 func _create_skill_button(skill_data: Dictionary) -> Button:
 	var btn := Button.new()
 	btn.name = skill_data.id
-	btn.custom_minimum_size = Vector2(75, 80)
+	btn.custom_minimum_size = Vector2(65, 70)  # Plus compact
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.text = skill_data.icon + "\n" + skill_data.name
 	
 	var style := StyleBoxFlat.new()
@@ -624,7 +769,8 @@ func _on_skill_pressed(skill_data: Dictionary) -> void:
 	
 	# Vérifier le cooldown
 	if skill_cooldowns[skill_id] > 0:
-		_show_floating_text("COOLDOWN!", Vector2(360, 500), Color(0.7, 0.7, 0.7), 18)
+		var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+		_show_floating_text("COOLDOWN!", Vector2(viewport_size.x * 0.5 - 50, viewport_size.y * 0.70), Color(0.7, 0.7, 0.7), 18)
 		return
 	
 	# Vérifier si le combat est actif
@@ -662,7 +808,8 @@ func _activate_heal_burst() -> void:
 	
 	# Full heal
 	var healed := hero.heal(hero.base_stats.max_hp)
-	_show_floating_text("💚 FULL HEAL! +%d" % healed, Vector2(150, 350), Color(0.3, 1.0, 0.5), 32)
+	var hero_pos := hero_container.position + Vector2(50, -100)
+	_show_floating_text("💚 FULL HEAL! +%d" % healed, hero_pos, Color(0.3, 1.0, 0.5), 32)
 	_flash_entity(hero, Color(0.3, 1.0, 0.5, 0.8))
 
 
@@ -679,7 +826,8 @@ func _activate_crit_surge() -> void:
 	_create_skill_particles(hero.global_position + Vector2(80, 400), Color(1.0, 0.7, 0.2), 15)
 	
 	hero.add_temp_modifier("crit_chance", 0.50, "add", 8.0)
-	_show_floating_text("💥 CRIT SURGE! +50%", Vector2(150, 350), Color(1.0, 0.7, 0.2), 32)
+	var hero_pos := hero_container.position + Vector2(50, -100)
+	_show_floating_text("💥 CRIT SURGE! +50%", hero_pos, Color(1.0, 0.7, 0.2), 32)
 	_flash_entity(hero, Color(1.0, 0.7, 0.2, 0.8))
 
 
@@ -697,7 +845,8 @@ func _activate_dodge_field() -> void:
 	
 	# 100% dodge pendant 3s
 	hero.add_temp_modifier("dodge_chance", 1.0, "add", 3.0)
-	_show_floating_text("🛡️ INVINCIBLE!", Vector2(150, 350), Color(0.6, 0.5, 1.0), 32)
+	var hero_pos := hero_container.position + Vector2(50, -100)
+	_show_floating_text("🛡️ INVINCIBLE!", hero_pos, Color(0.6, 0.5, 1.0), 32)
 	_flash_entity(hero, Color(0.6, 0.4, 1.0, 0.8))
 
 
@@ -721,7 +870,7 @@ func _activate_nova_blast() -> void:
 			total_damage += 50
 			_flash_entity(enemy, Color(1.0, 0.3, 0.1))
 	
-	_show_floating_text("☄️ NOVA BLAST! -%d" % total_damage, Vector2(350, 350), Color(1.0, 0.3, 0.2), 36)
+	_show_floating_text("☄️ NOVA BLAST! -%d" % total_damage, enemy_container.position + Vector2(0, -100), Color(1.0, 0.3, 0.2), 36)
 
 
 ## Crée un flash d'écran coloré
@@ -900,7 +1049,12 @@ func _on_hero_pose_changed(pose_name: StringName, duration: float) -> void:
 # ==================== ENEMY SPAWNING ====================
 
 func _spawn_wave() -> void:
-	wave_label.text = "WAVE %d / %d" % [current_wave, total_waves]
+	if is_boss_wave:
+		wave_label.text = "⚠️ BOSS ⚠️"
+		wave_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	else:
+		wave_label.text = "WAVE %d / %d" % [current_wave, total_waves]
+		wave_label.add_theme_color_override("font_color", Color.WHITE)
 	
 	# Déterminer le nombre d'ennemis pour cette vague
 	var wave_idx := clampi(current_wave - 1, 0, ENEMIES_PER_WAVE.size() - 1)
@@ -931,7 +1085,10 @@ func _spawn_enemy(index: int) -> void:
 	enemy_stats.crit_chance = 0.05 + (current_wave * 0.01)  # +1% crit par vague
 	enemy.base_stats = enemy_stats
 	
-	enemy.position = Vector2(index * 80, index * 40 - 40)
+	# Position relative à l'écran
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var enemy_spacing: float = viewport_size.x * 0.10  # 10% de la largeur entre chaque ennemi
+	enemy.position = Vector2(index * enemy_spacing, index * 35 - 35)
 	enemy_container.add_child(enemy)
 	
 	# Créer le visuel de l'ennemi
@@ -960,40 +1117,47 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 	var planet_data: Dictionary = PLANET_COLORS.get(current_planet, PLANET_COLORS[0])
 	var accent: Color = planet_data.accent
 	
+	# Taille relative au viewport
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var body_width: int = mini(50, int(viewport_size.x * 0.07))
+	var body_height: int = int(body_width * 1.4)
+	
 	# Corps
 	var body := ColorRect.new()
 	body.color = accent.darkened(0.3)
-	body.size = Vector2(50, 70)
-	body.position = Vector2(-25, -70)
+	body.size = Vector2(body_width, body_height)
+	body.position = Vector2(-body_width * 0.5, -body_height)
 	visual.add_child(body)
 	
 	# Tête
+	var head_size := body_width * 0.8
 	var head := ColorRect.new()
 	head.color = accent
-	head.size = Vector2(40, 40)
-	head.position = Vector2(-20, -110)
+	head.size = Vector2(head_size, head_size)
+	head.position = Vector2(-head_size / 2, -body_height - head_size)
 	visual.add_child(head)
 	
 	# Oeil unique (méchant)
 	var eye := ColorRect.new()
 	eye.color = Color.BLACK
-	eye.size = Vector2(15, 8)
-	eye.position = Vector2(-7, -95)
+	eye.size = Vector2(head_size * 0.35, head_size * 0.2)
+	eye.position = Vector2(-head_size * 0.18, -body_height - head_size * 0.6)
 	visual.add_child(eye)
 	
 	# Barre de vie
+	var hp_bar_width := body_width * 1.2
 	var hp_bg := ColorRect.new()
 	hp_bg.name = "HPBackground"
 	hp_bg.color = Color(0.1, 0.1, 0.1, 0.8)
-	hp_bg.size = Vector2(60, 8)
-	hp_bg.position = Vector2(-30, -125)
+	hp_bg.size = Vector2(hp_bar_width, 8)
+	hp_bg.position = Vector2(-hp_bar_width / 2, -body_height - head_size - 15)
 	visual.add_child(hp_bg)
 	
 	var hp_fill := ColorRect.new()
 	hp_fill.name = "HPFill"
 	hp_fill.color = Color(0.9, 0.2, 0.2)
-	hp_fill.size = Vector2(58, 6)
-	hp_fill.position = Vector2(-29, -124)
+	hp_fill.size = Vector2(hp_bar_width - 2, 6)
+	hp_fill.position = Vector2(-hp_bar_width / 2 + 1, -body_height - head_size - 14)
 	visual.add_child(hp_fill)
 	
 	return visual
@@ -1001,10 +1165,18 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 
 # ==================== VISUAL EFFECTS ====================
 
+## Positions relatives pour les floating texts
+func _get_relative_pos(x_percent: float, y_percent: float) -> Vector2:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	return Vector2(viewport_size.x * x_percent, viewport_size.y * y_percent)
+
 func _show_floating_text(text: String, pos: Vector2, color: Color, size: int = 24) -> void:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	# Adapter la taille du texte au viewport
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var adjusted_size: int = int(float(size) * minf(1.0, viewport_size.x / 720.0))
+	label.add_theme_font_size_override("font_size", adjusted_size)
 	label.add_theme_color_override("font_color", color)
 	label.position = pos
 	label.z_index = 100
@@ -1155,40 +1327,46 @@ func _update_enemy_count() -> void:
 
 func _on_player_action(action: StringName, success: bool) -> void:
 	if success:
-		var pos := Vector2(360, 600)
+		var hero_pos := hero_container.position + Vector2(50, -50)
+		var enemy_pos := enemy_container.position + Vector2(0, -80)
 		match action:
 			&"heal":
-				_show_floating_text("💚 HEAL", pos, Color(0.3, 0.9, 1.0), 22)
+				_show_floating_text("💚 HEAL", hero_pos, Color(0.3, 0.9, 1.0), 22)
 				_flash_entity(hero, Color(0.3, 1.0, 0.5, 0.6))
 			&"boost":
-				_show_floating_text("⚡ BOOST!", pos, Color(1.0, 0.8, 0.2), 22)
+				_show_floating_text("🛡️ DODGE!", hero_pos, Color(1.0, 0.8, 0.2), 22)
 				_flash_entity(hero, Color(1.0, 0.9, 0.3, 0.6))
 			&"attack":
-				_show_floating_text("⚔️ ATK", pos, Color(1.0, 0.4, 0.3), 22)
+				_show_floating_text("⚔️ ATK", enemy_pos, Color(1.0, 0.4, 0.3), 22)
 	else:
 		# Action refusée (pression trop haute)
-		_show_floating_text("❌ BLOCKED", Vector2(360, 620), Color(0.7, 0.3, 0.3), 16)
+		var hero_pos := hero_container.position + Vector2(50, 0)
+		_show_floating_text("❌ BLOCKED", hero_pos, Color(0.7, 0.3, 0.3), 16)
 
 
 func _on_critical_hit(damage: int) -> void:
-	_show_floating_text("CRIT! %d" % damage, Vector2(500, 350), Color(1.0, 0.8, 0.0), 32)
+	var enemy_pos := enemy_container.position + Vector2(0, -50)
+	_show_floating_text("CRIT! %d" % damage, enemy_pos, Color(1.0, 0.8, 0.0), 32)
 
 
 func _on_dodge_success() -> void:
-	_show_floating_text("DODGE!", Vector2(150, 350), Color(0.5, 0.8, 1.0), 28)
+	var hero_pos := hero_container.position + Vector2(50, -50)
+	_show_floating_text("DODGE!", hero_pos, Color(0.5, 0.8, 1.0), 28)
 	_flash_entity(hero, Color(0.5, 0.8, 1.0, 0.8))
 
 
 func _on_hero_healed(amount: int) -> void:
-	_show_floating_text("+%d" % amount, Vector2(120, 380), Color(0.3, 1.0, 0.5), 24)
+	var hero_pos := hero_container.position + Vector2(50, -80)
+	_show_floating_text("+%d" % amount, hero_pos, Color(0.3, 1.0, 0.5), 24)
 
 
 func _on_hero_damaged(amount: int, is_crit: bool) -> void:
 	_flash_entity(hero, Color(1.0, 0.3, 0.3))
+	var hero_pos := hero_container.position + Vector2(50, -30)
 	var text := "-%d" % amount
 	if is_crit:
 		text += "!"
-	_show_floating_text(text, Vector2(120, 400), Color(1.0, 0.3, 0.3), 20)
+	_show_floating_text(text, hero_pos, Color(1.0, 0.3, 0.3), 20)
 
 
 func _on_enemy_damaged(amount: int, is_crit: bool, enemy: BaseEnemy) -> void:
@@ -1197,7 +1375,8 @@ func _on_enemy_damaged(amount: int, is_crit: bool, enemy: BaseEnemy) -> void:
 	
 	_flash_entity(enemy, Color(1.0, 1.0, 1.0))
 	
-	var pos := enemy.global_position + Vector2(480, 280)
+	# Position relative à l'ennemi dans le container
+	var pos := enemy_container.position + enemy.position + Vector2(0, -100)
 	var text := "-%d" % amount
 	var color := Color(1.0, 1.0, 1.0)
 	if is_crit:
@@ -1235,8 +1414,10 @@ func _on_enemy_died(enemy: BaseEnemy) -> void:
 	
 	# Récompense basée sur la vague
 	var reward := ENEMY_KILL_REWARD + (current_wave * 2)
+	coins_earned_this_run += reward
 	SaveManager.add_currency(reward)
-	_show_floating_text("+%d SC" % reward, enemy.global_position + Vector2(480, 300), Color(1.0, 0.85, 0.3), 18)
+	var reward_pos := enemy_container.position + enemy.position + Vector2(0, -60)
+	_show_floating_text("+%d SC" % reward, reward_pos, Color(1.0, 0.85, 0.3), 18)
 	
 	# Vérifier si vague terminée
 	if active_enemies.is_empty():
@@ -1245,20 +1426,28 @@ func _on_enemy_died(enemy: BaseEnemy) -> void:
 
 func _on_wave_cleared() -> void:
 	# Bonus de vague
+	coins_earned_this_run += WAVE_CLEAR_BONUS
 	SaveManager.add_currency(WAVE_CLEAR_BONUS)
-	_show_floating_text("WAVE CLEAR! +%d SC" % WAVE_CLEAR_BONUS, Vector2(200, 350), Color(0.3, 1.0, 0.5), 28)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var center_pos := Vector2(viewport_size.x * 0.5 - 80, viewport_size.y * 0.30)
+	_show_floating_text("WAVE CLEAR! +%d SC" % WAVE_CLEAR_BONUS, center_pos, Color(0.3, 1.0, 0.5), 28)
 	
 	current_wave += 1
 	if current_wave <= total_waves:
 		await get_tree().create_timer(1.5).timeout
-		_show_floating_text("⚔️ WAVE %d ⚔️" % current_wave, Vector2(250, 400), Color.WHITE, 36)
+		_show_floating_text("⚔️ WAVE %d ⚔️" % current_wave, center_pos + Vector2(0, 30), Color.WHITE, 36)
 		await get_tree().create_timer(0.8).timeout
 		_spawn_wave()
 		# Redémarrer le combat pour la nouvelle vague
 		state_machine.start_combat()
 	else:
-		# Toutes les vagues terminées - VICTOIRE!
-		state_machine.on_wave_cleared()
+		# Toutes les vagues terminées - BOSS TIME!
+		print("[GameCombat] All waves cleared! Spawning boss...")
+		await get_tree().create_timer(1.5).timeout
+		_show_floating_text("⚠️ BOSS INCOMING! ⚠️", center_pos, Color(1.0, 0.3, 0.3), 36)
+		await get_tree().create_timer(1.0).timeout
+		_spawn_boss()
+		state_machine.start_combat()
 
 
 func _on_hero_hp_changed(_current: int, _max_hp: int) -> void:
@@ -1268,7 +1457,8 @@ func _on_hero_hp_changed(_current: int, _max_hp: int) -> void:
 ## Signal direct quand le héros meurt - déclenche la défaite
 func _on_hero_died_signal() -> void:
 	if not is_game_over:
-		state_machine.on_hero_died()
+		print("[GameCombat] Hero died! Triggering defeat...")
+		_on_defeat()
 
 
 func _on_state_changed(_old_state: CombatStateMachine.State, new_state: CombatStateMachine.State) -> void:
@@ -1317,7 +1507,9 @@ func _on_punishment_started(_duration: float) -> void:
 		&"attack":
 			color = Color(0.9, 0.3, 0.3)
 	
-	_show_floating_text("⚠️ %s OVERLOAD!" % action_name, Vector2(200, 400), color, 24)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var center_pos := Vector2(viewport_size.x * 0.5 - 100, viewport_size.y * 0.32)
+	_show_floating_text("⚠️ %s OVERLOAD!" % action_name, center_pos, color, 24)
 	
 	# Animation légère de l'overlay (moins punitive visuellement)
 	var tween := create_tween()
@@ -1334,8 +1526,16 @@ func _on_punishment_ended() -> void:
 
 func _on_victory() -> void:
 	is_game_over = true
-	_show_floating_text("🎉 VICTORY! 🎉", Vector2(200, 300), Color(1.0, 0.85, 0.3), 48)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var center_pos := Vector2(viewport_size.x * 0.5 - 100, viewport_size.y * 0.25)
+	_show_floating_text("🎉 VICTORY! 🎉", center_pos, Color(1.0, 0.85, 0.3), 48)
+	
+	# Bonus de victoire
+	coins_earned_this_run += VICTORY_BONUS
 	SaveManager.add_currency(VICTORY_BONUS)
+	
+	# Sauvegarder la progression - planète complétée!
+	# Note: Les coins sont déjà sauvés, pas besoin de restore
 	
 	# Afficher l'écran de victoire
 	await get_tree().create_timer(1.0).timeout
@@ -1421,13 +1621,20 @@ func _show_game_over_screen(is_victory: bool) -> void:
 	vbox.add_child(stats_container)
 	
 	_add_stat_line("Planet", PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).name)
-	_add_stat_line("Waves", "%d / %d" % [current_wave - 1 if not is_victory else total_waves, total_waves])
+	_add_stat_line("Waves", "%d / %d" % [current_wave if is_victory else current_wave - 1, total_waves])
 	_add_stat_line("HP", "%d / %d" % [maxi(0, hero.current_hp), hero.base_stats.max_hp])
-	_add_stat_line("StarCoins", "%d" % SaveManager.get_currency())
+	_add_stat_line("Coins this run", "+%d SC" % coins_earned_this_run)
+	_add_stat_line("Total StarCoins", "%d SC" % SaveManager.get_currency())
 	
 	# Message
 	var message := Label.new()
-	message.text = "Ready for the next planet!" if is_victory else "You keep your StarCoins!"
+	if is_victory:
+		if current_planet < 3:
+			message.text = "Ready for the next planet!"
+		else:
+			message.text = "🎉 YOU CONQUERED THE SOLAR SYSTEM! 🎉"
+	else:
+		message.text = "Coins lost: -%d SC (retry to try again)" % coins_earned_this_run
 	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	message.add_theme_font_size_override("font_size", 13)
 	message.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -1437,35 +1644,46 @@ func _show_game_over_screen(is_victory: bool) -> void:
 	var sep2 := HSeparator.new()
 	vbox.add_child(sep2)
 	
-	# Bouton RETRY - Simple Button
-	var retry_btn := Button.new()
-	retry_btn.text = "RETRY"
-	retry_btn.custom_minimum_size = Vector2(200, 55)
-	retry_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	retry_btn.add_theme_font_size_override("font_size", 20)
-	retry_btn.pressed.connect(_on_retry_pressed)
-	vbox.add_child(retry_btn)
+	# Boutons selon le résultat
+	if is_victory:
+		# Bouton NEXT PLANET si pas la dernière planète
+		if current_planet < 3:
+			var next_btn := Button.new()
+			next_btn.text = "NEXT PLANET →"
+			next_btn.custom_minimum_size = Vector2(200, 55)
+			next_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			next_btn.add_theme_font_size_override("font_size", 20)
+			next_btn.pressed.connect(_on_next_planet_pressed)
+			vbox.add_child(next_btn)
+		
+		# Bouton REPLAY pour rejouer cette planète
+		var replay_btn := Button.new()
+		replay_btn.text = "REPLAY PLANET"
+		replay_btn.custom_minimum_size = Vector2(200, 55)
+		replay_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		replay_btn.add_theme_font_size_override("font_size", 18)
+		replay_btn.pressed.connect(_on_replay_pressed)
+		vbox.add_child(replay_btn)
+	else:
+		# Bouton RETRY (perd les coins de cette run)
+		var retry_btn := Button.new()
+		retry_btn.text = "RETRY (lose %d SC)" % coins_earned_this_run
+		retry_btn.custom_minimum_size = Vector2(250, 55)
+		retry_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		retry_btn.add_theme_font_size_override("font_size", 18)
+		retry_btn.pressed.connect(_on_retry_pressed)
+		vbox.add_child(retry_btn)
 	
-	# Bouton NEXT si victoire
-	if is_victory and current_planet < 3:
-		var next_btn := Button.new()
-		next_btn.text = "NEXT PLANET"
-		next_btn.custom_minimum_size = Vector2(200, 55)
-		next_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		next_btn.add_theme_font_size_override("font_size", 20)
-		next_btn.pressed.connect(_on_next_planet_pressed)
-		vbox.add_child(next_btn)
-	
-	# Bouton MENU - Retour au menu principal
+	# Bouton MENU - Toujours disponible
 	var menu_btn := Button.new()
-	menu_btn.text = "MENU"
-	menu_btn.custom_minimum_size = Vector2(200, 55)
+	menu_btn.text = "MAIN MENU"
+	menu_btn.custom_minimum_size = Vector2(200, 45)
 	menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	menu_btn.add_theme_font_size_override("font_size", 20)
+	menu_btn.add_theme_font_size_override("font_size", 16)
 	menu_btn.pressed.connect(_on_menu_pressed)
 	vbox.add_child(menu_btn)
 	
-	print("[GameOver] Screen created, buttons should be clickable")
+	print("[GameOver] Screen created, coins earned: %d" % coins_earned_this_run)
 
 
 func _add_stat_line(label_text: String, value_text: String) -> void:
@@ -1521,14 +1739,22 @@ func _create_styled_button(text: String, color: Color) -> Button:
 
 func _on_retry_pressed() -> void:
 	print("[RETRY] Button pressed!")
-	# Perdre tous les starcoins gagnés lors de cette partie
-	SaveManager.reset_currency()
+	# Restaurer les coins qu'on avait AVANT de commencer cette partie
+	SaveManager.restore_session_currency()
+	get_tree().reload_current_scene()
+
+
+func _on_replay_pressed() -> void:
+	print("[REPLAY] Button pressed!")
+	# Rejouer la même planète mais garder les coins (on a gagné!)
+	# Juste recharger la scène sans changer de planète
 	get_tree().reload_current_scene()
 
 
 func _on_next_planet_pressed() -> void:
 	print("[NEXT] Button pressed!")
-	current_planet = mini(current_planet + 1, 3)
+	# Garder les coins gagnés (déjà sauvés)
+	# Passer à la planète suivante
 	if SaveManager:
 		SaveManager.advance_planet()
 	get_tree().reload_current_scene()
@@ -1536,4 +1762,668 @@ func _on_next_planet_pressed() -> void:
 
 func _on_menu_pressed() -> void:
 	print("[MENU] Button pressed!")
+	# Retourner au menu principal
+	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+
+
+# ==================== PAUSE MENU ====================
+
+func _setup_pause_menu() -> void:
+	pause_panel = Control.new()
+	pause_panel.name = "PausePanel"
+	pause_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_panel.visible = false
+	pause_panel.z_index = 150
+	pause_panel.process_mode = Node.PROCESS_MODE_ALWAYS  # Continue de fonctionner même en pause
+	hud_layer.add_child(pause_panel)
+	
+	# Background semi-transparent
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.85)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_panel.add_child(bg)
+	
+	# Container centré
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_panel.add_child(center)
+	
+	# Panel principal
+	var panel := PanelContainer.new()
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+	panel_style.border_color = Color(0.4, 0.6, 0.9)
+	panel_style.set_border_width_all(3)
+	panel_style.set_corner_radius_all(15)
+	panel_style.content_margin_left = 40
+	panel_style.content_margin_right = 40
+	panel_style.content_margin_top = 30
+	panel_style.content_margin_bottom = 30
+	panel.add_theme_stylebox_override("panel", panel_style)
+	center.add_child(panel)
+	
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 20)
+	panel.add_child(vbox)
+	
+	# Titre
+	var title := Label.new()
+	title.text = "⏸️ PAUSED"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color(0.4, 0.7, 1.0))
+	vbox.add_child(title)
+	
+	# Boutons
+	var resume_btn := _create_pause_button("▶️ RESUME", Color(0.3, 0.8, 0.4))
+	resume_btn.pressed.connect(_toggle_pause)
+	vbox.add_child(resume_btn)
+	
+	var restart_btn := _create_pause_button("🔄 RESTART", Color(0.9, 0.7, 0.2))
+	restart_btn.pressed.connect(_on_pause_restart)
+	vbox.add_child(restart_btn)
+	
+	var menu_btn := _create_pause_button("🏠 MAIN MENU", Color(0.8, 0.4, 0.4))
+	menu_btn.pressed.connect(_on_pause_menu)
+	vbox.add_child(menu_btn)
+
+
+func _create_pause_button(text: String, color: Color) -> Button:
+	var btn := Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(200, 50)
+	
+	var style := StyleBoxFlat.new()
+	style.bg_color = color.darkened(0.3)
+	style.border_color = color
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	btn.add_theme_stylebox_override("normal", style)
+	
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = color.darkened(0.1)
+	hover.border_color = color.lightened(0.2)
+	hover.set_border_width_all(2)
+	hover.set_corner_radius_all(8)
+	btn.add_theme_stylebox_override("hover", hover)
+	
+	var pressed := StyleBoxFlat.new()
+	pressed.bg_color = color
+	pressed.border_color = Color.WHITE
+	pressed.set_border_width_all(2)
+	pressed.set_corner_radius_all(8)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	
+	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	
+	return btn
+
+
+func _toggle_pause() -> void:
+	is_paused = not is_paused
+	get_tree().paused = is_paused
+	pause_panel.visible = is_paused
+	
+	if is_paused:
+		click_zone_button.set_active(false)
+	else:
+		click_zone_button.set_active(true)
+
+
+func _on_pause_restart() -> void:
+	get_tree().paused = false
+	SaveManager.restore_session_currency()
+	get_tree().reload_current_scene()
+
+
+func _on_pause_menu() -> void:
+	get_tree().paused = false
+	SaveManager.restore_session_currency()
+	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+
+
+# ==================== CINEMATIC SYSTEM ====================
+
+func _show_cinematic() -> void:
+	is_showing_cinematic = true
+	cinematic_slide_index = 0
+	
+	cinematic_layer = CanvasLayer.new()
+	cinematic_layer.name = "CinematicLayer"
+	cinematic_layer.layer = 200
+	add_child(cinematic_layer)
+	
+	_show_cinematic_slide()
+
+
+func _show_cinematic_slide() -> void:
+	# Nettoyer le slide précédent
+	for child in cinematic_layer.get_children():
+		child.queue_free()
+	
+	var slides: Array = PLANET_CINEMATICS.get(current_planet, PLANET_CINEMATICS[0])
+	if cinematic_slide_index >= slides.size():
+		_end_cinematic()
+		return
+	
+	var slide_data: Dictionary = slides[cinematic_slide_index]
+	
+	# Background
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.95)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	cinematic_layer.add_child(bg)
+	
+	# Container centré
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cinematic_layer.add_child(center)
+	
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 30)
+	center.add_child(vbox)
+	
+	# Emoji géant
+	var emoji := Label.new()
+	emoji.text = slide_data.emoji
+	emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	emoji.add_theme_font_size_override("font_size", 80)
+	vbox.add_child(emoji)
+	
+	# Texte avec effet machine à écrire
+	var text_label := Label.new()
+	text_label.name = "CinematicText"
+	text_label.text = ""
+	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_label.custom_minimum_size.x = mini(400, get_viewport().size.x - 60)  # Adaptatif
+	text_label.add_theme_font_size_override("font_size", 18)  # Un peu plus petit
+	text_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
+	vbox.add_child(text_label)
+	
+	# Animation de typewriter
+	var full_text: String = slide_data.text
+	_typewriter_effect(text_label, full_text)
+	
+	# Indicateur de planète
+	var planet_indicator := Label.new()
+	var planet_name: String = PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).name
+	planet_indicator.text = "📍 %s" % planet_name
+	planet_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	planet_indicator.add_theme_font_size_override("font_size", 14)
+	planet_indicator.add_theme_color_override("font_color", PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).accent)
+	vbox.add_child(planet_indicator)
+	
+	# Spacer
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 40
+	vbox.add_child(spacer)
+	
+	# Bouton continuer
+	var continue_btn := Button.new()
+	continue_btn.text = "TAP TO CONTINUE ▶"
+	continue_btn.custom_minimum_size = Vector2(250, 50)
+	
+	var btn_style := StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.2, 0.4, 0.6, 0.8)
+	btn_style.border_color = Color(0.4, 0.7, 1.0)
+	btn_style.set_border_width_all(2)
+	btn_style.set_corner_radius_all(10)
+	continue_btn.add_theme_stylebox_override("normal", btn_style)
+	continue_btn.add_theme_font_size_override("font_size", 16)
+	continue_btn.add_theme_color_override("font_color", Color.WHITE)
+	continue_btn.pressed.connect(_on_cinematic_continue)
+	vbox.add_child(continue_btn)
+	
+	# Compteur de slides
+	var slide_counter := Label.new()
+	slide_counter.text = "%d / %d" % [cinematic_slide_index + 1, slides.size()]
+	slide_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	slide_counter.add_theme_font_size_override("font_size", 12)
+	slide_counter.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	vbox.add_child(slide_counter)
+
+
+func _typewriter_effect(label: Label, full_text: String) -> void:
+	var current_text := ""
+	for i in range(full_text.length()):
+		current_text += full_text[i]
+		label.text = current_text
+		await get_tree().create_timer(0.03).timeout
+		if not is_instance_valid(label):
+			return
+
+
+func _on_cinematic_continue() -> void:
+	cinematic_slide_index += 1
+	_show_cinematic_slide()
+
+
+func _end_cinematic() -> void:
+	is_showing_cinematic = false
+	
+	if cinematic_layer:
+		cinematic_layer.queue_free()
+		cinematic_layer = null
+	
+	# Démarrer le combat
+	await get_tree().create_timer(0.5).timeout
+	_spawn_wave()
+	state_machine.start_combat()
+
+
+# ==================== BOSS SYSTEM ====================
+
+func _spawn_boss() -> void:
+	is_boss_wave = true
+	var boss_data: Dictionary = PLANET_BOSSES.get(current_planet, PLANET_BOSSES[0])
+	var is_final_boss: bool = current_planet == 3
+	
+	# Calculer le scaling selon la progression du joueur
+	var highest_completed: int = -1
+	if SaveManager:
+		highest_completed = SaveManager.get_highest_planet_completed()
+	
+	# Le boss scale aussi un peu avec la progression pour rester challengeant
+	var boss_hp_mult: float = 1.0 + (highest_completed + 1) * 0.1
+	# Dr. Mortis est BEAUCOUP plus dur
+	if is_final_boss:
+		boss_hp_mult *= 1.3
+	
+	# Créer l'entité du boss
+	current_boss = BaseEnemy.new()
+	current_boss.name = "Boss_" + boss_data.name.replace(" ", "_")
+	
+	var boss_stats := EntityStats.new()
+	boss_stats.display_name = boss_data.name
+	boss_stats.max_hp = int(boss_data.hp * boss_hp_mult)
+	boss_stats.attack = boss_data.atk
+	boss_stats.attack_speed = boss_data.speed
+	current_boss.base_stats = boss_stats
+	
+	# Ajouter au combat
+	enemy_container.add_child(current_boss)
+	combat_manager.add_enemy(current_boss)
+	active_enemies.append(current_boss)
+	
+	# Visuel du boss (plus grand que les ennemis normaux)
+	_create_boss_visual(current_boss, boss_data)
+	
+	# Connecter les signaux
+	current_boss.died.connect(_on_boss_died.bind(current_boss))
+	current_boss.hp_changed.connect(_on_boss_hp_changed)  # Signal spécial pour le boss
+	
+	# Annonce du boss - ÉPIQUE pour Dr. Mortis
+	if is_final_boss:
+		_announce_final_boss()
+	else:
+		_show_floating_text("⚠️ BOSS: %s ⚠️" % boss_data.name, Vector2(200, 350), boss_data.color, 32)
+	
+	print("[GameCombat] Boss spawned: %s with %d HP" % [boss_data.name, boss_stats.max_hp])
+
+
+func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
+	var is_final_boss: bool = current_planet == 3
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	
+	var visual := Control.new()
+	visual.name = "BossVisual"
+	var base_size: int = mini(180, int(viewport_size.x * 0.25))  # Max 25% de la largeur
+	var size_mult: float = 1.4 if is_final_boss else 1.0
+	visual.custom_minimum_size = Vector2(base_size, base_size * 1.1) * size_mult
+	
+	# Container pour le boss (centré)
+	var boss_container := CenterContainer.new()
+	boss_container.custom_minimum_size = Vector2(base_size, base_size * 1.1) * size_mult
+	visual.add_child(boss_container)
+	
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	boss_container.add_child(vbox)
+	
+	# Titre spécial pour Dr. Mortis
+	if is_final_boss:
+		var title := Label.new()
+		title.text = "☠️ FINAL BOSS ☠️"
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.add_theme_font_size_override("font_size", 14)
+		title.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		vbox.add_child(title)
+		
+		# Animation du titre
+		var title_tween := create_tween().set_loops()
+		title_tween.tween_property(title, "modulate:a", 0.5, 0.5)
+		title_tween.tween_property(title, "modulate:a", 1.0, 0.5)
+	
+	# Emoji du boss (taille relative)
+	var emoji := Label.new()
+	emoji.name = "BossEmoji"
+	emoji.text = boss_data.emoji
+	emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var emoji_size: int = int(base_size * 0.55) if is_final_boss else int(base_size * 0.45)
+	emoji.add_theme_font_size_override("font_size", emoji_size)
+	vbox.add_child(emoji)
+	
+	# Animation de pulsation pour le boss final
+	if is_final_boss:
+		var pulse_tween := create_tween().set_loops()
+		pulse_tween.tween_property(emoji, "scale", Vector2(1.1, 1.1), 0.8).set_trans(Tween.TRANS_SINE)
+		pulse_tween.tween_property(emoji, "scale", Vector2(1.0, 1.0), 0.8).set_trans(Tween.TRANS_SINE)
+	
+	# Nom du boss
+	var name_label := Label.new()
+	name_label.text = boss_data.name
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var name_size: int = 22 if is_final_boss else 16
+	name_label.add_theme_font_size_override("font_size", name_size)
+	name_label.add_theme_color_override("font_color", boss_data.color)
+	vbox.add_child(name_label)
+	
+	# Sous-titre pour Dr. Mortis
+	if is_final_boss:
+		var subtitle := Label.new()
+		subtitle.text = "\"Your family begged for mercy...\""
+		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		subtitle.add_theme_font_size_override("font_size", 10)
+		subtitle.add_theme_color_override("font_color", Color(0.7, 0.5, 0.8))
+		vbox.add_child(subtitle)
+	
+	# Barre de vie du boss (taille relative)
+	var hp_bar := ProgressBar.new()
+	hp_bar.name = "BossHPBar"
+	var bar_width: int = int(base_size * 1.0) if is_final_boss else int(base_size * 0.9)
+	var bar_height: int = 20 if is_final_boss else 14
+	hp_bar.custom_minimum_size = Vector2(bar_width, bar_height)
+	hp_bar.max_value = boss.base_stats.max_hp
+	hp_bar.value = boss.base_stats.max_hp  # CORRECTION: Utiliser max_hp, pas current_hp
+	hp_bar.show_percentage = false
+	
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = boss_data.color
+	fill_style.set_corner_radius_all(4)
+	hp_bar.add_theme_stylebox_override("fill", fill_style)
+	
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.1, 0.1, 0.1, 0.95)
+	bg_style.border_color = boss_data.color
+	var border_width: int = 3 if is_final_boss else 2
+	bg_style.set_border_width_all(border_width)
+	bg_style.set_corner_radius_all(4)
+	hp_bar.add_theme_stylebox_override("background", bg_style)
+	
+	vbox.add_child(hp_bar)
+	
+	# HP numérique pour le boss final
+	if is_final_boss:
+		var hp_text := Label.new()
+		hp_text.name = "BossHPText"
+		hp_text.text = "%d / %d" % [boss.base_stats.max_hp, boss.base_stats.max_hp]
+		hp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hp_text.add_theme_font_size_override("font_size", 12)
+		hp_text.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+		vbox.add_child(hp_text)
+	
+	# Positionner dans le container des ennemis
+	var y_offset: float = -20.0 if is_final_boss else 30.0
+	visual.position = Vector2(-20 if is_final_boss else 0, y_offset)
+	boss.add_child(visual)
+	
+	enemy_visuals[boss] = visual
+	boss_visual = visual
+	
+	# Animation d'apparition épique
+	visual.modulate.a = 0
+	var tween := create_tween()
+	if is_final_boss:
+		# Apparition plus dramatique pour Dr. Mortis
+		tween.tween_property(visual, "modulate:a", 1.0, 1.0)
+		tween.parallel().tween_property(visual, "scale", Vector2(1.0, 1.0), 0.8).from(Vector2(2.0, 2.0)).set_trans(Tween.TRANS_BACK)
+	else:
+		tween.tween_property(visual, "modulate:a", 1.0, 0.5)
+		tween.parallel().tween_property(visual, "scale", Vector2(1.0, 1.0), 0.3).from(Vector2(1.5, 1.5))
+
+
+func _on_boss_died(boss: BaseEnemy) -> void:
+	var boss_data: Dictionary = PLANET_BOSSES.get(current_planet, PLANET_BOSSES[0])
+	var is_final_boss: bool = current_planet == 3
+	
+	# Récompense spéciale pour le boss (plus pour le boss final!)
+	var boss_reward: int = ENEMY_KILL_REWARD * (10 if is_final_boss else 5)
+	coins_earned_this_run += boss_reward
+	SaveManager.add_currency(boss_reward)
+	
+	if is_final_boss:
+		_show_floating_text("☠️ DR. MORTIS IS DEAD! +%d SC ☠️" % boss_reward, Vector2(150, 300), Color(0.8, 0.4, 1.0), 32)
+	else:
+		_show_floating_text("💀 %s DEFEATED! +%d SC" % [boss_data.name, boss_reward], Vector2(200, 300), Color(1.0, 0.8, 0.2), 28)
+	
+	# Effets visuels de mort du boss
+	_create_boss_death_effect(boss)
+	
+	# Nettoyer
+	if boss in active_enemies:
+		active_enemies.erase(boss)
+	if enemy_visuals.has(boss):
+		enemy_visuals[boss].queue_free()
+		enemy_visuals.erase(boss)
+	boss.queue_free()
+	
+	is_boss_wave = false
+	current_boss = null
+	boss_visual = null
+	
+	# Victoire (ou cinématique de fin pour Dr. Mortis)
+	await get_tree().create_timer(2.0 if is_final_boss else 1.5).timeout
+	
+	if is_final_boss:
+		# Cinématique de fin!
+		_show_ending_cinematic()
+	else:
+		_on_victory()
+
+
+func _create_boss_death_effect(_boss: BaseEnemy) -> void:
+	# Grande explosion pour le boss
+	var is_final: bool = current_planet == 3
+	var particle_count: int = 50 if is_final else 25
+	
+	for i in range(particle_count):
+		var particle := ColorRect.new()
+		var size_range: float = 40.0 if is_final else 25.0
+		particle.size = Vector2(randf_range(10, size_range), randf_range(10, size_range))
+		var boss_color: Color = PLANET_BOSSES.get(current_planet, PLANET_BOSSES[0]).color
+		particle.color = boss_color if randf() > 0.3 else Color.WHITE
+		
+		var start_pos := Vector2(480 + randf_range(-50, 50), 380 + randf_range(-50, 50))
+		particle.position = start_pos
+		effects_layer.add_child(particle)
+		
+		var tween := create_tween()
+		var spread: float = 300.0 if is_final else 200.0
+		var end_pos := start_pos + Vector2(randf_range(-spread, spread), randf_range(-spread, 150))
+		tween.tween_property(particle, "position", end_pos, randf_range(0.8, 1.5))
+		tween.parallel().tween_property(particle, "modulate:a", 0.0, randf_range(0.8, 1.5))
+		tween.parallel().tween_property(particle, "rotation", randf_range(-PI * 2, PI * 2), randf_range(0.8, 1.5))
+		tween.tween_callback(particle.queue_free)
+	
+	# Flash écran (plus intense pour le boss final)
+	var flash := ColorRect.new()
+	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	flash.color = Color(1, 1, 1, 1.0 if is_final else 0.8)
+	effects_layer.add_child(flash)
+	
+	var flash_tween := create_tween()
+	flash_tween.tween_property(flash, "color:a", 0.0, 0.8 if is_final else 0.5)
+	flash_tween.tween_callback(flash.queue_free)
+
+
+## Annonce épique pour le boss final
+func _announce_final_boss() -> void:
+	# Fond rouge qui pulse
+	var warning_bg := ColorRect.new()
+	warning_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	warning_bg.color = Color(0.5, 0, 0, 0)
+	effects_layer.add_child(warning_bg)
+	
+	var bg_tween := create_tween().set_loops(3)
+	bg_tween.tween_property(warning_bg, "color:a", 0.4, 0.3)
+	bg_tween.tween_property(warning_bg, "color:a", 0.0, 0.3)
+	bg_tween.chain().tween_callback(warning_bg.queue_free)
+	
+	# Texte d'avertissement
+	await get_tree().create_timer(0.2).timeout
+	_show_floating_text("⚠️ WARNING ⚠️", Vector2(200, 250), Color(1.0, 0.3, 0.3), 36)
+	
+	await get_tree().create_timer(0.6).timeout
+	_show_floating_text("☠️ FINAL BOSS ☠️", Vector2(180, 320), Color(0.8, 0.2, 0.6), 42)
+	
+	await get_tree().create_timer(0.6).timeout
+	_show_floating_text("💀 DR. MORTIS 💀", Vector2(150, 400), Color(0.6, 0.2, 0.8), 48)
+	
+	await get_tree().create_timer(0.5).timeout
+	_show_floating_text("\"I killed them all... and I'll kill YOU too!\"", Vector2(80, 470), Color(0.7, 0.5, 0.8), 16)
+
+
+## Mise à jour de la barre de vie du boss
+func _on_boss_hp_changed(current_hp: int, max_hp: int) -> void:
+	if boss_visual and is_instance_valid(boss_visual):
+		var hp_bar := boss_visual.find_child("BossHPBar", true, false) as ProgressBar
+		if hp_bar:
+			hp_bar.value = current_hp
+			
+			# Changer la couleur si HP bas
+			var fill_style := hp_bar.get_theme_stylebox("fill") as StyleBoxFlat
+			if fill_style:
+				var hp_percent: float = float(current_hp) / float(max_hp)
+				if hp_percent <= 0.25:
+					fill_style.bg_color = Color(1.0, 0.2, 0.2)  # Rouge critique
+				elif hp_percent <= 0.5:
+					fill_style.bg_color = Color(1.0, 0.6, 0.2)  # Orange
+		
+		# Mettre à jour le texte HP pour le boss final
+		var hp_text := boss_visual.find_child("BossHPText", true, false) as Label
+		if hp_text:
+			hp_text.text = "%d / %d" % [current_hp, max_hp]
+	
+	# Mettre à jour aussi la barre globale des ennemis
+	if current_boss:
+		_on_enemy_hp_changed(current_hp, max_hp, current_boss)
+
+
+## Afficher la cinématique de fin après avoir battu Dr. Mortis
+func _show_ending_cinematic() -> void:
+	is_showing_cinematic = true
+	cinematic_slide_index = 0
+	
+	cinematic_layer = CanvasLayer.new()
+	cinematic_layer.name = "EndingCinematicLayer"
+	cinematic_layer.layer = 200
+	add_child(cinematic_layer)
+	
+	_show_ending_slide()
+
+
+func _show_ending_slide() -> void:
+	# Nettoyer le slide précédent
+	for child in cinematic_layer.get_children():
+		child.queue_free()
+	
+	if cinematic_slide_index >= ENDING_CINEMATIC.size():
+		_end_ending_cinematic()
+		return
+	
+	var slide_data: Dictionary = ENDING_CINEMATIC[cinematic_slide_index]
+	
+	# Background noir
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.98)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	cinematic_layer.add_child(bg)
+	
+	# Container centré
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cinematic_layer.add_child(center)
+	
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 25)
+	center.add_child(vbox)
+	
+	# Emoji géant
+	var emoji := Label.new()
+	emoji.text = slide_data.emoji
+	emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	emoji.add_theme_font_size_override("font_size", 90)
+	vbox.add_child(emoji)
+	
+	# Texte
+	var text_label := Label.new()
+	text_label.name = "EndingText"
+	text_label.text = ""
+	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_label.custom_minimum_size.x = mini(400, get_viewport().size.x - 60)  # Adaptatif
+	
+	# Style spécial pour "TO BE CONTINUED"
+	var is_final_slide: bool = cinematic_slide_index == ENDING_CINEMATIC.size() - 1
+	if is_final_slide:
+		text_label.add_theme_font_size_override("font_size", 28)  # Un peu plus petit
+		text_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
+	else:
+		text_label.add_theme_font_size_override("font_size", 18)  # Un peu plus petit
+		text_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
+	vbox.add_child(text_label)
+	
+	# Animation de typewriter
+	_typewriter_effect(text_label, slide_data.text)
+	
+	# Spacer
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 50
+	vbox.add_child(spacer)
+	
+	# Bouton continuer
+	var continue_btn := Button.new()
+	continue_btn.text = "CONTINUE ▶" if not is_final_slide else "🏆 FINISH 🏆"
+	continue_btn.custom_minimum_size = Vector2(250, 55)
+	
+	var btn_color: Color = Color(0.6, 0.4, 0.2) if is_final_slide else Color(0.2, 0.4, 0.6)
+	var btn_style := StyleBoxFlat.new()
+	btn_style.bg_color = btn_color.darkened(0.2)
+	btn_style.border_color = btn_color.lightened(0.3)
+	btn_style.set_border_width_all(2)
+	btn_style.set_corner_radius_all(10)
+	continue_btn.add_theme_stylebox_override("normal", btn_style)
+	continue_btn.add_theme_font_size_override("font_size", 18)
+	continue_btn.add_theme_color_override("font_color", Color.WHITE)
+	continue_btn.pressed.connect(_on_ending_continue)
+	vbox.add_child(continue_btn)
+	
+	# Compteur de slides
+	var slide_counter := Label.new()
+	slide_counter.text = "%d / %d" % [cinematic_slide_index + 1, ENDING_CINEMATIC.size()]
+	slide_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	slide_counter.add_theme_font_size_override("font_size", 12)
+	slide_counter.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	vbox.add_child(slide_counter)
+
+
+func _on_ending_continue() -> void:
+	cinematic_slide_index += 1
+	_show_ending_slide()
+
+
+func _end_ending_cinematic() -> void:
+	is_showing_cinematic = false
+	
+	if cinematic_layer:
+		cinematic_layer.queue_free()
+		cinematic_layer = null
+	
+	# Afficher l'écran de victoire finale
+	_show_game_over_screen(true)
