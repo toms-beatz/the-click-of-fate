@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EntityStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/stats/entity_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+display_name = "Venus Spitter"
+max_hp = 50
+attack = 6
+attack_speed = 1.2
+defense = 3
+crit_chance = 0.05
+crit_multiplier = 1.5
+dodge_chance = 0.05
+move_speed = 80.0
