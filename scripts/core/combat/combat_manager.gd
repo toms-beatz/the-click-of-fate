@@ -23,14 +23,19 @@ signal dodge_success()
 ## [param amount] Montant soigné
 signal hero_healed(amount: int)
 
+## Émis quand la pose du héros doit changer
+## [param pose_name] "idle", "attack", "dodge", "heal", "special"
+## [param duration] Durée avant retour à idle (0 = permanent)
+signal hero_pose_changed(pose_name: StringName, duration: float)
+
 
 ## Valeurs de base des actions du joueur (planète 1 sans upgrades)
-const BASE_HEAL_PERCENT := 0.03  # 3% des PV max
-const BASE_BOOST_DODGE := 0.05   # +5% esquive temporaire
-const BASE_ATTACK_DAMAGE := 5    # 5 dégâts
+const BASE_HEAL_PERCENT := 0.13  # 13% des PV max (~20 HP)
+const BASE_DODGE_BONUS := 0.20   # +20% esquive temporaire (c'est vraiment une esquive!)
+const BASE_ATTACK_DAMAGE := 10   # 10 dégâts directs
 
-## Durée du boost temporaire (secondes)
-const BOOST_DURATION := 3.0
+## Durée du buff d'esquive temporaire (secondes)
+const DODGE_BUFF_DURATION := 4.0
 
 ## Bonus de crit quand le joueur clique Attack
 const ATTACK_CLICK_CRIT_BONUS := 0.10  # +10% de crit pendant 1 attaque
@@ -59,7 +64,23 @@ func _connect_systems() -> void:
 	if state_machine:
 		state_machine.state_changed.connect(_on_state_changed)
 	
+	_connect_hero_signals()
+
+
+## Connecte les signaux du héros (appelé après assignation du hero)
+func _connect_hero_signals() -> void:
 	if hero:
+		# Déconnecter d'abord pour éviter les doublons
+		if hero.attacked.is_connected(_on_hero_attacked):
+			hero.attacked.disconnect(_on_hero_attacked)
+		if hero.damaged.is_connected(_on_hero_damaged):
+			hero.damaged.disconnect(_on_hero_damaged)
+		if hero.died.is_connected(_on_hero_died):
+			hero.died.disconnect(_on_hero_died)
+		if hero.dodged.is_connected(_on_hero_dodged):
+			hero.dodged.disconnect(_on_hero_dodged)
+		
+		# Reconnecter
 		hero.attacked.connect(_on_hero_attacked)
 		hero.damaged.connect(_on_hero_damaged)
 		hero.died.connect(_on_hero_died)
@@ -73,15 +94,29 @@ func connect_click_zone(click_zone: ClickZoneButton) -> void:
 
 ## Traite un clic sur une zone
 func _on_zone_pressed(zone: StringName) -> void:
+	print("[CombatManager] Zone pressed: ", zone)
+	print("[CombatManager] state_machine exists: ", state_machine != null)
+	if state_machine:
+		print("[CombatManager] can_player_act: ", state_machine.can_player_act())
+		print("[CombatManager] current_state: ", state_machine.get_state_name())
+	
 	if not state_machine or not state_machine.can_player_act():
+		print("[CombatManager] Cannot act - returning")
 		return
 	
+	print("[CombatManager] Hero exists: ", hero != null)
+	if hero:
+		print("[CombatManager] Hero is_alive: ", hero.is_alive)
+	
 	if not pressure_gauge:
+		print("[CombatManager] No pressure gauge - executing directly")
 		_execute_action(zone)
+		player_action.emit(zone, true)
 		return
 	
 	# Enregistrer dans la jauge de pression
 	var accepted := pressure_gauge.register_click(zone)
+	print("[CombatManager] Pressure accepted: ", accepted)
 	
 	if accepted:
 		_execute_action(zone)
@@ -95,36 +130,50 @@ func _execute_action(zone: StringName) -> void:
 	match zone:
 		&"heal":
 			_do_heal()
-		&"boost":
-			_do_boost()
+		&"boost", &"dodge":
+			_do_dodge()
 		&"attack":
 			_do_attack()
 
 
 ## Action HEAL: Soigne le héros
 func _do_heal() -> void:
-	if not hero or not hero.is_alive:
+	print("[CombatManager] _do_heal called")
+	if not hero:
+		print("[CombatManager] No hero!")
+		return
+	if not hero.is_alive:
+		print("[CombatManager] Hero is dead!")
 		return
 	
+	hero_pose_changed.emit(&"special", 0.5)  # Pose dual-wield pour heal burst
+	print("[CombatManager] Healing hero by ", BASE_HEAL_PERCENT * 100, "%")
 	var healed := hero.heal_percent(BASE_HEAL_PERCENT)
+	print("[CombatManager] Healed amount: ", healed)
 	if healed > 0:
 		hero_healed.emit(healed)
 
 
-## Action BOOST: Augmente temporairement l'esquive
-func _do_boost() -> void:
+## Action DODGE: Augmente temporairement l'esquive
+func _do_dodge() -> void:
 	if not hero or not hero.is_alive:
 		return
 	
+	hero_pose_changed.emit(&"dodge", 0.4)  # Pose crouch défensive
+	print("[CombatManager] _do_dodge called - +", BASE_DODGE_BONUS * 100, "% dodge for ", DODGE_BUFF_DURATION, "s")
 	# Ajouter un modificateur temporaire d'esquive
-	hero.add_temp_modifier("dodge_chance", BASE_BOOST_DODGE, "add", BOOST_DURATION)
-	_active_dodge_bonus = BASE_BOOST_DODGE
+	hero.add_temp_modifier("dodge_chance", BASE_DODGE_BONUS, "add", DODGE_BUFF_DURATION)
+	_active_dodge_bonus = BASE_DODGE_BONUS
 
 
 ## Action ATTACK: Prépare un bonus de crit pour la prochaine attaque
 func _do_attack() -> void:
 	if not hero or not hero.is_alive:
 		return
+	
+	# Animation d'attaque aléatoire parmi les 3 poses
+	var attack_poses: Array[StringName] = [&"attack_1", &"attack_2", &"attack_3"]
+	hero_pose_changed.emit(attack_poses.pick_random(), 0.35)
 	
 	# Le clic Attack augmente la chance de crit de la prochaine attaque
 	hero.add_temp_modifier("crit_chance", ATTACK_CLICK_CRIT_BONUS, "add", 2.0)
@@ -171,10 +220,8 @@ func remove_enemy(enemy: BaseEntity) -> void:
 ## Callback quand un ennemi meurt
 func _on_enemy_died(enemy: BaseEntity) -> void:
 	remove_enemy(enemy)
-	
-	# Vérifier si tous les ennemis sont morts
-	if _are_all_enemies_dead() and state_machine:
-		state_machine.on_wave_cleared()
+	# Note: La vérification de fin de vague est gérée par game_combat_scene
+	# qui a sa propre liste d'ennemis et gère les transitions de vagues
 
 
 ## Vérifie si tous les ennemis sont morts

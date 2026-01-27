@@ -22,18 +22,18 @@ signal zone_released(zone: StringName)
 
 
 ## Les 3 zones d'action
-enum Zone { HEAL, BOOST, ATTACK }
+enum Zone { HEAL, DODGE, ATTACK }
 
 ## Mapping zone -> StringName pour les signaux
 const ZONE_NAMES: Dictionary = {
 	Zone.HEAL: &"heal",
-	Zone.BOOST: &"boost",
+	Zone.DODGE: &"dodge",
 	Zone.ATTACK: &"attack"
 }
 
 ## Couleurs de base par zone
 @export var heal_color: Color = Color(0.2, 0.6, 0.9, 0.8)  # Bleu
-@export var boost_color: Color = Color(0.9, 0.7, 0.2, 0.8)  # Jaune/Or
+@export var dodge_color: Color = Color(0.6, 0.4, 0.9, 0.8)  # Violet
 @export var attack_color: Color = Color(0.9, 0.3, 0.2, 0.8)  # Rouge
 
 ## Couleur de highlight quand pressé
@@ -54,6 +54,20 @@ var _zone_rects: Dictionary = {}
 ## Labels pour chaque zone
 var _zone_labels: Dictionary = {}
 
+## Labels des noms originaux
+var _zone_original_names: Dictionary = {
+	Zone.HEAL: "HEAL",
+	Zone.DODGE: "DODGE",
+	Zone.ATTACK: "ATTACK"
+}
+
+## État de blocage par zone
+var _zone_blocked: Dictionary = {
+	Zone.HEAL: false,
+	Zone.DODGE: false,
+	Zone.ATTACK: false
+}
+
 ## Tweens actifs pour le feedback
 var _feedback_tweens: Dictionary = {}
 
@@ -63,6 +77,11 @@ func _ready() -> void:
 	
 	# S'assurer que le Control reçoit les inputs
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	# Attendre un frame pour que la taille soit définie
+	await get_tree().process_frame
+	if size.x <= 0:
+		push_warning("ClickZoneButton: size.x is 0, inputs won't work correctly")
 
 
 func _setup_visuals() -> void:
@@ -75,7 +94,7 @@ func _setup_visuals() -> void:
 	
 	# Créer les 3 zones
 	_create_zone(container, Zone.HEAL, "HEAL", heal_color)
-	_create_zone(container, Zone.BOOST, "BOOST", boost_color)
+	_create_zone(container, Zone.DODGE, "DODGE", dodge_color)
 	_create_zone(container, Zone.ATTACK, "ATTACK", attack_color)
 
 
@@ -122,11 +141,12 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _handle_touch(event: InputEventScreenTouch) -> void:
-	if not is_active:
-		return
-	
 	var local_pos := get_local_mouse_position()
 	var zone := _get_zone_from_position(local_pos)
+	
+	# Vérifier si CETTE zone est bloquée (pas tout le bouton)
+	if _zone_blocked.get(zone, false):
+		return
 	
 	if event.pressed:
 		_on_zone_pressed(zone)
@@ -135,14 +155,15 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 
 
 func _handle_mouse(event: InputEventMouseButton) -> void:
-	if not is_active:
-		return
-	
 	if event.button_index != MOUSE_BUTTON_LEFT:
 		return
 	
 	var local_pos := event.position - global_position
 	var zone := _get_zone_from_position(local_pos)
+	
+	# Vérifier si CETTE zone est bloquée (pas tout le bouton)
+	if _zone_blocked.get(zone, false):
+		return
 	
 	if event.pressed:
 		_on_zone_pressed(zone)
@@ -152,17 +173,20 @@ func _handle_mouse(event: InputEventMouseButton) -> void:
 
 ## Détermine la zone en fonction de la position X relative
 func _get_zone_from_position(local_pos: Vector2) -> Zone:
-	var ratio_x := local_pos.x / size.x
+	# Fallback si la taille n'est pas encore définie
+	var width := size.x if size.x > 0 else 680.0
+	var ratio_x := local_pos.x / width
 	
 	if ratio_x < 0.33:
 		return Zone.HEAL
 	elif ratio_x < 0.66:
-		return Zone.BOOST
+		return Zone.DODGE
 	else:
 		return Zone.ATTACK
 
 
 func _on_zone_pressed(zone: Zone) -> void:
+	print("[ClickZone] Zone pressed: ", ZONE_NAMES[zone], " | is_active: ", is_active)
 	_current_zone = zone
 	_show_feedback(zone, true)
 	zone_pressed.emit(ZONE_NAMES[zone])
@@ -193,8 +217,8 @@ func _show_feedback(zone: Zone, pressed: bool) -> void:
 	match zone:
 		Zone.HEAL:
 			base_color = heal_color
-		Zone.BOOST:
-			base_color = boost_color
+		Zone.DODGE:
+			base_color = dodge_color
 		Zone.ATTACK:
 			base_color = attack_color
 	
@@ -210,12 +234,85 @@ func _show_feedback(zone: Zone, pressed: bool) -> void:
 	_feedback_tweens[zone] = tween
 
 
-## Active ou désactive le bouton (pour punishment)
+## Active ou désactive le bouton entier (legacy)
 func set_active(active: bool) -> void:
 	is_active = active
 	
 	# Feedback visuel de désactivation
 	modulate.a = 1.0 if active else 0.5
+
+
+## Bloque une zone spécifique avec timer comme les skills
+func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: float = 0.0) -> void:
+	var zone: Zone
+	match zone_name:
+		&"heal":
+			zone = Zone.HEAL
+		&"dodge", &"boost":
+			zone = Zone.DODGE
+		&"attack":
+			zone = Zone.ATTACK
+		_:
+			return
+	
+	# Éviter de mettre à jour si l'état n'a pas changé (sauf pour le timer)
+	if _zone_blocked[zone] == blocked and not blocked:
+		return
+	
+	_zone_blocked[zone] = blocked
+	
+	var rect: PanelContainer = _zone_rects.get(zone)
+	if not rect:
+		return
+	
+	var stylebox: StyleBoxFlat = rect.get_theme_stylebox("panel")
+	if not stylebox:
+		return
+	
+	var label: Label = _zone_labels.get(zone)
+	
+	if blocked:
+		# Style désactivé comme les skills
+		stylebox.bg_color = Color(0.2, 0.2, 0.2, 0.7)
+		stylebox.border_width_left = 2
+		stylebox.border_width_top = 2
+		stylebox.border_width_right = 2
+		stylebox.border_width_bottom = 2
+		stylebox.border_color = Color(0.5, 0.5, 0.5, 0.5)
+		
+		if label:
+			# Afficher le timer comme les skills
+			label.text = "%.1fs" % time_remaining
+			label.modulate.a = 0.6
+	else:
+		# Restaurer la couleur et le style original
+		var original_color: Color
+		var original_name: String = _zone_original_names[zone]
+		match zone:
+			Zone.HEAL:
+				original_color = heal_color
+			Zone.DODGE:
+				original_color = dodge_color
+			Zone.ATTACK:
+				original_color = attack_color
+		
+		stylebox.bg_color = original_color
+		stylebox.border_width_left = 0
+		stylebox.border_width_top = 0
+		stylebox.border_width_right = 0
+		stylebox.border_width_bottom = 0
+		
+		if label:
+			label.text = original_name
+			label.modulate.a = 1.0
+
+
+## Vérifie si une zone spécifique est cliquable
+func is_zone_active(_zone_name: StringName) -> bool:
+	if not is_active:
+		return false
+	# Ici on pourrait ajouter une vérification des zones bloquées
+	return true
 
 
 ## Retourne le nom de la zone actuellement pressée (ou "" si aucune)

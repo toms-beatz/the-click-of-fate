@@ -204,6 +204,13 @@ func add_currency(amount: int) -> void:
 	save_game()
 
 
+## Réinitialise la monnaie à 0 (pour retry)
+func reset_currency() -> void:
+	data["currency_sc"] = 0
+	currency_changed.emit(0)
+	save_game()
+
+
 ## Dépense de la monnaie (retourne false si pas assez)
 func spend_currency(amount: int) -> bool:
 	if get_currency() < amount:

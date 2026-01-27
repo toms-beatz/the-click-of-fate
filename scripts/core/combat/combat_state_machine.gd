@@ -95,11 +95,13 @@ func on_wave_cleared() -> void:
 		wave_completed.emit(current_wave)
 		
 		if current_wave >= WAVES_PER_PLANET:
-			# Toutes les vagues normales terminées → Boss
+			# Toutes les vagues normales terminées → Victoire!
 			_change_state(State.VICTORY)
+			victory.emit()
 		else:
-			# Courte pause puis prochaine vague
-			_change_state(State.VICTORY)
+			# Entre les vagues - rester en IDLE pour la transition
+			# Le jeu appellera start_combat() pour la prochaine vague
+			_change_state(State.IDLE)
 	elif current_state == State.BOSS_PHASE:
 		boss_defeated.emit()
 		_change_state(State.VICTORY)
