@@ -98,6 +98,34 @@ var hero_textures: Dictionary = {}
 enum HeroPose { IDLE, READY, DODGE, ATTACK_1, ATTACK_2, ATTACK_3, SPECIAL }
 var current_hero_pose: HeroPose = HeroPose.IDLE
 
+## Enemy Sprite System - sprites par planète
+const ENEMY_SPRITES := {
+	1: {  # Venus (index 1)
+		"standing": "res://assets/sprites/enemies/venus-sprites-standing.png",
+		"shooting": "res://assets/sprites/enemies/venus-sprites-shooting.png",
+		"hurt": "res://assets/sprites/enemies/venus-sprites-on-knee.png"
+	},
+	2: {  # Mars (index 2)
+		"standing": "res://assets/sprites/enemies/mars-sprites-standing.png",
+		"shooting": "res://assets/sprites/enemies/mars-sprites-shooting.png",
+		"hurt": "res://assets/sprites/enemies/mars-sprites-before-shooting.png"
+	},
+	3: {  # Earth (index 3)
+		"standing": "res://assets/sprites/enemies/earth-sprites-standing.png",
+		"shooting": "res://assets/sprites/enemies/earth-sprites-shooting.png",
+		"hurt": "res://assets/sprites/enemies/earth-sprites-on-knee.png"
+	}
+}
+
+## Mini-boss sprites
+const MINIBOSS_SPRITES := {
+	"idle": "res://assets/sprites/enemies/mini-boss.png",
+	"screaming": "res://assets/sprites/enemies/mini-boss-screaming.png",
+	"screaming2": "res://assets/sprites/enemies/mini-boss-screaming-2.png",
+	"fireball": "res://assets/sprites/enemies/mini-boss-fireball.png",
+	"other_side": "res://assets/sprites/enemies/mini-boss-other-side.png"
+}
+
 ## ========== BALANCE CONFIG ==========
 ## Héros
 const HERO_BASE_HP := 150
@@ -1121,43 +1149,66 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var body_width: int = mini(50, int(viewport_size.x * 0.07))
 	var body_height: int = int(body_width * 1.4)
+	var sprite_size := Vector2(body_width * 2, body_height * 2)
 	
-	# Corps
-	var body := ColorRect.new()
-	body.color = accent.darkened(0.3)
-	body.size = Vector2(body_width, body_height)
-	body.position = Vector2(-body_width * 0.5, -body_height)
-	visual.add_child(body)
+	# Vérifier si on a un sprite pour cette planète
+	var enemy_sprite_data: Dictionary = ENEMY_SPRITES.get(current_planet, {})
+	var sprite_path: String = enemy_sprite_data.get("standing", "")
 	
-	# Tête
-	var head_size := body_width * 0.8
-	var head := ColorRect.new()
-	head.color = accent
-	head.size = Vector2(head_size, head_size)
-	head.position = Vector2(-head_size / 2, -body_height - head_size)
-	visual.add_child(head)
+	if ResourceLoader.exists(sprite_path):
+		# Utiliser le sprite
+		var sprite := TextureRect.new()
+		sprite.name = "EnemySprite"
+		sprite.texture = load(sprite_path)
+		sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		sprite.custom_minimum_size = sprite_size
+		sprite.size = sprite_size
+		sprite.position = Vector2(-sprite_size.x / 2, -sprite_size.y)
+		visual.add_child(sprite)
+		
+		# Stocker les autres textures pour les animations
+		enemy.set_meta("sprite_standing", sprite_path)
+		enemy.set_meta("sprite_shooting", enemy_sprite_data.get("shooting", sprite_path))
+		enemy.set_meta("sprite_hurt", enemy_sprite_data.get("hurt", sprite_path))
+	else:
+		# Fallback: ColorRect (Mercury n'a pas de sprite)
+		# Corps
+		var body := ColorRect.new()
+		body.color = accent.darkened(0.3)
+		body.size = Vector2(body_width, body_height)
+		body.position = Vector2(-body_width * 0.5, -body_height)
+		visual.add_child(body)
+		
+		# Tête
+		var head_size := body_width * 0.8
+		var head := ColorRect.new()
+		head.color = accent
+		head.size = Vector2(head_size, head_size)
+		head.position = Vector2(-head_size / 2, -body_height - head_size)
+		visual.add_child(head)
+		
+		# Oeil unique (méchant)
+		var eye := ColorRect.new()
+		eye.color = Color.BLACK
+		eye.size = Vector2(head_size * 0.35, head_size * 0.2)
+		eye.position = Vector2(-head_size * 0.18, -body_height - head_size * 0.6)
+		visual.add_child(eye)
 	
-	# Oeil unique (méchant)
-	var eye := ColorRect.new()
-	eye.color = Color.BLACK
-	eye.size = Vector2(head_size * 0.35, head_size * 0.2)
-	eye.position = Vector2(-head_size * 0.18, -body_height - head_size * 0.6)
-	visual.add_child(eye)
-	
-	# Barre de vie
+	# Barre de vie (toujours présente)
 	var hp_bar_width := body_width * 1.2
 	var hp_bg := ColorRect.new()
 	hp_bg.name = "HPBackground"
 	hp_bg.color = Color(0.1, 0.1, 0.1, 0.8)
 	hp_bg.size = Vector2(hp_bar_width, 8)
-	hp_bg.position = Vector2(-hp_bar_width / 2, -body_height - head_size - 15)
+	hp_bg.position = Vector2(-hp_bar_width / 2, -sprite_size.y - 15)
 	visual.add_child(hp_bg)
 	
 	var hp_fill := ColorRect.new()
 	hp_fill.name = "HPFill"
 	hp_fill.color = Color(0.9, 0.2, 0.2)
 	hp_fill.size = Vector2(hp_bar_width - 2, 6)
-	hp_fill.position = Vector2(-hp_bar_width / 2 + 1, -body_height - head_size - 14)
+	hp_fill.position = Vector2(-hp_bar_width / 2 + 1, -sprite_size.y - 14)
 	visual.add_child(hp_fill)
 	
 	return visual
@@ -2099,20 +2150,40 @@ func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
 		title_tween.tween_property(title, "modulate:a", 0.5, 0.5)
 		title_tween.tween_property(title, "modulate:a", 1.0, 0.5)
 	
-	# Emoji du boss (taille relative)
-	var emoji := Label.new()
-	emoji.name = "BossEmoji"
-	emoji.text = boss_data.emoji
-	emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var emoji_size: int = int(base_size * 0.55) if is_final_boss else int(base_size * 0.45)
-	emoji.add_theme_font_size_override("font_size", emoji_size)
-	vbox.add_child(emoji)
-	
-	# Animation de pulsation pour le boss final
-	if is_final_boss:
-		var pulse_tween := create_tween().set_loops()
-		pulse_tween.tween_property(emoji, "scale", Vector2(1.1, 1.1), 0.8).set_trans(Tween.TRANS_SINE)
-		pulse_tween.tween_property(emoji, "scale", Vector2(1.0, 1.0), 0.8).set_trans(Tween.TRANS_SINE)
+	# Sprite du mini-boss OU emoji pour le boss final
+	var sprite_path: String = MINIBOSS_SPRITES.get("idle", "")
+	if not is_final_boss and ResourceLoader.exists(sprite_path):
+		# Utiliser le sprite du mini-boss
+		var sprite_container := CenterContainer.new()
+		var sprite := TextureRect.new()
+		sprite.name = "BossSprite"
+		sprite.texture = load(sprite_path)
+		sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var sprite_size := int(base_size * 0.8)
+		sprite.custom_minimum_size = Vector2(sprite_size, sprite_size)
+		sprite_container.add_child(sprite)
+		vbox.add_child(sprite_container)
+		
+		# Stocker les textures pour animation
+		boss.set_meta("sprite_idle", sprite_path)
+		boss.set_meta("sprite_screaming", MINIBOSS_SPRITES.get("screaming", sprite_path))
+		boss.set_meta("sprite_fireball", MINIBOSS_SPRITES.get("fireball", sprite_path))
+	else:
+		# Emoji du boss (pour boss final ou fallback)
+		var emoji := Label.new()
+		emoji.name = "BossEmoji"
+		emoji.text = boss_data.emoji
+		emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var emoji_size: int = int(base_size * 0.55) if is_final_boss else int(base_size * 0.45)
+		emoji.add_theme_font_size_override("font_size", emoji_size)
+		vbox.add_child(emoji)
+		
+		# Animation de pulsation pour le boss final
+		if is_final_boss:
+			var pulse_tween := create_tween().set_loops()
+			pulse_tween.tween_property(emoji, "scale", Vector2(1.1, 1.1), 0.8).set_trans(Tween.TRANS_SINE)
+			pulse_tween.tween_property(emoji, "scale", Vector2(1.0, 1.0), 0.8).set_trans(Tween.TRANS_SINE)
 	
 	# Nom du boss
 	var name_label := Label.new()

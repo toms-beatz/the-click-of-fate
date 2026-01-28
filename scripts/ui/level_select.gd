@@ -42,7 +42,8 @@ const PLANETS_INFO := [
 		"color": Color(0.9, 0.4, 0.1),
 		"bg_color": Color(0.3, 0.15, 0.05),
 		"difficulty": 1,
-		"recommended_power": 100
+		"recommended_power": 100,
+		"sprite": "res://assets/sprites/planets/mercury.png"
 	},
 	{
 		"id": "venus",
@@ -51,7 +52,8 @@ const PLANETS_INFO := [
 		"color": Color(0.9, 0.75, 0.2),
 		"bg_color": Color(0.3, 0.25, 0.05),
 		"difficulty": 2,
-		"recommended_power": 140
+		"recommended_power": 140,
+		"sprite": "res://assets/sprites/planets/venus.png"
 	},
 	{
 		"id": "mars",
@@ -60,7 +62,8 @@ const PLANETS_INFO := [
 		"color": Color(0.85, 0.25, 0.15),
 		"bg_color": Color(0.25, 0.08, 0.05),
 		"difficulty": 3,
-		"recommended_power": 190
+		"recommended_power": 190,
+		"sprite": "res://assets/sprites/planets/mars.png"
 	},
 	{
 		"id": "earth",
@@ -69,7 +72,8 @@ const PLANETS_INFO := [
 		"color": Color(0.2, 0.6, 0.9),
 		"bg_color": Color(0.05, 0.15, 0.25),
 		"difficulty": 4,
-		"recommended_power": 270
+		"recommended_power": 270,
+		"sprite": "res://assets/sprites/planets/earth.png"
 	}
 ]
 
@@ -97,12 +101,30 @@ const PLANET_SIZE_CENTER := 160.0
 ## Taille des planètes sur les côtés
 const PLANET_SIZE_SIDE := 100.0
 
+## Vaisseaux d'arrière-plan
+const SPACESHIP_SPRITES := [
+	"res://assets/sprites/enemies/vaisseau-1.png",
+	"res://assets/sprites/enemies/vaisseau-2.png",
+	"res://assets/sprites/enemies/vaisseau-3.png",
+	"res://assets/sprites/enemies/vaisseau-4.png",
+	"res://assets/sprites/enemies/vaisseau-5.png",
+	"res://assets/sprites/enemies/vaisseau-6.png"
+]
+
+## Container pour les vaisseaux (arrière-plan)
+var spaceships_container: Control
+var active_spaceships: Array[TextureRect] = []
+const MAX_SPACESHIPS := 8
+const SPACESHIP_SPAWN_INTERVAL := 2.0
+var spaceship_timer: float = 0.0
+
 
 func _ready() -> void:
 	_connect_signals()
 	_update_displays()
 	# Attendre que le carousel_container ait sa taille
 	await get_tree().process_frame
+	_create_spaceships_background()
 	_create_planet_carousel()
 	_animate_entrance()
 
@@ -207,17 +229,32 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 	ring_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ring.add_child(ring_bg)
 	
-	# Cercle de la planète
-	var planet_visual := ColorRect.new()
-	planet_visual.name = "PlanetVisual"
-	planet_visual.set_anchors_preset(Control.PRESET_FULL_RECT)
-	
-	if is_unlocked:
-		planet_visual.color = info["color"]
+	# Image de la planète (TextureRect) ou ColorRect fallback
+	var sprite_path: String = info.get("sprite", "")
+	if ResourceLoader.exists(sprite_path):
+		var planet_sprite := TextureRect.new()
+		planet_sprite.name = "PlanetVisual"
+		planet_sprite.texture = load(sprite_path)
+		planet_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		planet_sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		planet_sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
+		
+		if not is_unlocked:
+			planet_sprite.modulate = Color(0.4, 0.4, 0.4)  # Grisé
+		
+		container.add_child(planet_sprite)
 	else:
-		planet_visual.color = Color(0.35, 0.35, 0.35)  # Grisé
-	
-	container.add_child(planet_visual)
+		# Fallback: ColorRect si pas de sprite
+		var planet_visual := ColorRect.new()
+		planet_visual.name = "PlanetVisual"
+		planet_visual.set_anchors_preset(Control.PRESET_FULL_RECT)
+		
+		if is_unlocked:
+			planet_visual.color = info["color"]
+		else:
+			planet_visual.color = Color(0.35, 0.35, 0.35)
+		
+		container.add_child(planet_visual)
 	
 	# Badge de complétion (checkmark vert)
 	if is_completed:
@@ -461,3 +498,120 @@ func _animate_entrance() -> void:
 		var pop_tween := create_tween()
 		pop_tween.tween_property(node, "scale", original_scale * 1.1, 0.3).set_delay(0.08 * i).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 		pop_tween.tween_property(node, "scale", original_scale, 0.12)
+
+
+# ==================== SPACESHIPS BACKGROUND ====================
+
+func _create_spaceships_background() -> void:
+	# Créer le container en arrière-plan (z_index négatif)
+	spaceships_container = Control.new()
+	spaceships_container.name = "SpaceshipsBackground"
+	spaceships_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	spaceships_container.z_index = -10  # Derrière tout
+	spaceships_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(spaceships_container)
+	move_child(spaceships_container, 0)  # Premier enfant = plus en arrière
+	
+	# Spawner quelques vaisseaux initiaux
+	for i in range(4):
+		_spawn_spaceship(true)
+
+
+func _process(delta: float) -> void:
+	# Spawner des vaisseaux périodiquement
+	spaceship_timer += delta
+	if spaceship_timer >= SPACESHIP_SPAWN_INTERVAL:
+		spaceship_timer = 0.0
+		if active_spaceships.size() < MAX_SPACESHIPS:
+			_spawn_spaceship(false)
+	
+	# Nettoyer les vaisseaux hors écran
+	_cleanup_spaceships()
+
+
+func _spawn_spaceship(random_position: bool) -> void:
+	# Vérifier qu'on a des sprites
+	var valid_sprites: Array[String] = []
+	for sprite_path in SPACESHIP_SPRITES:
+		if ResourceLoader.exists(sprite_path):
+			valid_sprites.append(sprite_path)
+	
+	if valid_sprites.is_empty():
+		return
+	
+	# Choisir un sprite aléatoire
+	var sprite_path: String = valid_sprites[randi() % valid_sprites.size()]
+	
+	var spaceship := TextureRect.new()
+	spaceship.texture = load(sprite_path)
+	spaceship.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	spaceship.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	spaceship.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Taille aléatoire (petits vaisseaux)
+	var base_size: float = randf_range(30.0, 60.0)
+	spaceship.custom_minimum_size = Vector2(base_size, base_size)
+	spaceship.size = Vector2(base_size, base_size)
+	
+	# Opacité réduite pour l'effet de fond
+	spaceship.modulate.a = randf_range(0.3, 0.6)
+	
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	
+	# Position de départ
+	if random_position:
+		# Position aléatoire sur l'écran
+		spaceship.position = Vector2(
+			randf_range(0, viewport_size.x),
+			randf_range(0, viewport_size.y)
+		)
+	else:
+		# Spawn sur le bord gauche ou droit
+		var from_left: bool = randf() > 0.5
+		spaceship.position = Vector2(
+			-base_size if from_left else viewport_size.x + base_size,
+			randf_range(50, viewport_size.y - 150)  # Éviter le header et footer
+		)
+	
+	spaceships_container.add_child(spaceship)
+	active_spaceships.append(spaceship)
+	
+	# Animation de déplacement
+	var direction: float = 1.0 if spaceship.position.x < viewport_size.x / 2 else -1.0
+	var travel_distance: float = viewport_size.x + base_size * 2
+	var speed: float = randf_range(30.0, 80.0)
+	var duration: float = travel_distance / speed
+	
+	# Légère oscillation verticale
+	var end_y: float = spaceship.position.y + randf_range(-100, 100)
+	end_y = clampf(end_y, 50, viewport_size.y - 150)
+	
+	var target_x: float = spaceship.position.x + (travel_distance * direction)
+	
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(spaceship, "position:x", target_x, duration)
+	tween.tween_property(spaceship, "position:y", end_y, duration).set_trans(Tween.TRANS_SINE)
+	
+	# Légère rotation
+	var rotation_amount: float = randf_range(-0.1, 0.1)
+	tween.tween_property(spaceship, "rotation", rotation_amount, duration / 2)
+
+
+func _cleanup_spaceships() -> void:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var to_remove: Array[TextureRect] = []
+	
+	for spaceship in active_spaceships:
+		if not is_instance_valid(spaceship):
+			to_remove.append(spaceship)
+			continue
+		
+		# Vérifier si hors écran
+		if spaceship.position.x < -100 or spaceship.position.x > viewport_size.x + 100:
+			to_remove.append(spaceship)
+	
+	for spaceship in to_remove:
+		active_spaceships.erase(spaceship)
+		if is_instance_valid(spaceship):
+			spaceship.queue_free()
