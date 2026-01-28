@@ -315,25 +315,8 @@ func _setup_background_gradient_fallback() -> void:
 	bg_rect.color = planet_colors.bg_bottom
 	background.add_child(bg_rect)
 	
-	# Top gradient overlay
-	var gradient_top := ColorRect.new()
-	gradient_top.name = "GradientTop"
-	gradient_top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	gradient_top.custom_minimum_size.y = 400
-	gradient_top.color = planet_colors.bg_top
-	background.add_child(gradient_top)
-	
 	# Particules d'ambiance (étoiles/poussière)
 	_add_ambient_particles(planet_colors.accent)
-	
-	# Ligne d'horizon
-	var horizon := ColorRect.new()
-	horizon.name = "Horizon"
-	horizon.color = planet_colors.accent.darkened(0.5)
-	horizon.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	horizon.custom_minimum_size.y = 2
-	horizon.position.y = -350
-	background.add_child(horizon)
 
 
 func _add_ambient_particles(accent_color: Color) -> void:
@@ -373,14 +356,6 @@ func _setup_combat_zone() -> void:
 	enemy_container.name = "EnemyContainer"
 	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.55)  # BMAD: Descend au niveau bande noire (était 0.40)
 	combat_zone.add_child(enemy_container)
-	
-	# Sol/Platform visuel (couvre toute la largeur)
-	var ground := ColorRect.new()
-	ground.name = "Ground"
-	ground.color = Color(0.1, 0.08, 0.06, 0.8)
-	ground.size = Vector2(viewport_size.x, viewport_size.y * 0.12)
-	ground.position = Vector2(0, viewport_size.y * 0.55)
-	combat_zone.add_child(ground)
 	
 	# Ligne de séparation combat (au centre)
 	var battle_line := ColorRect.new()
@@ -561,27 +536,23 @@ func _create_top_hud(parent: Control) -> void:
 	hero_section.add_theme_constant_override("separation", 3)
 	hbox.add_child(hero_section)
 	
-	var hero_header := HBoxContainer.new()
-	hero_section.add_child(hero_header)
+	# var hero_header := HBoxContainer.new()
+	# hero_section.add_child(hero_header)
 	
-	var hero_title := Label.new()
-	hero_title.text = "👽 ALIEN HERO"
-	hero_title.add_theme_font_size_override("font_size", 13)
-	hero_title.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
-	hero_header.add_child(hero_title)
-	
-	hero_hp_bar = _create_styled_progress_bar(Color(0.2, 0.9, 0.3), 180, 22)
-	hero_hp_bar.name = "HeroHPBar"
-	hero_section.add_child(hero_hp_bar)
+	# var hero_title := Label.new()
+	# hero_title.text = "👽 ALIEN HERO"
+	# hero_title.add_theme_font_size_override("font_size", 13)
+	# hero_title.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
+	# hero_header.add_child(hero_title)
 	
 	# Stats du héros sous la barre de vie (utilise les vraies stats calculées)
-	var hero_stats_label := Label.new()
-	hero_stats_label.name = "HeroStatsLabel"
-	var real_atk: int = hero.base_stats.attack if hero and hero.base_stats else HERO_BASE_ATTACK
-	hero_stats_label.text = "ATK: %d | SPD: %.1f | CRIT: %d%%" % [real_atk, HERO_ATTACK_SPEED, int(HERO_CRIT_CHANCE * 100)]
-	hero_stats_label.add_theme_font_size_override("font_size", 10)
-	hero_stats_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6))
-	hero_section.add_child(hero_stats_label)
+	# var hero_stats_label := Label.new()
+	# hero_stats_label.name = "HeroStatsLabel"
+	# var real_atk: int = hero.base_stats.attack if hero and hero.base_stats else HERO_BASE_ATTACK
+	# hero_stats_label.text = "ATK: %d | SPD: %.1f | CRIT: %d%%" % [real_atk, HERO_ATTACK_SPEED, int(HERO_CRIT_CHANCE * 100)]
+	# hero_stats_label.add_theme_font_size_override("font_size", 10)
+	# hero_stats_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6))
+	# hero_section.add_child(hero_stats_label)
 	
 	# Section centrale (Wave info + Planet)
 	var center_section := VBoxContainer.new()
@@ -598,26 +569,26 @@ func _create_top_hud(parent: Control) -> void:
 	center_section.add_child(planet_label)
 	
 	# Affichage puissance recommandée vs puissance du joueur
-	var recommended_power: int = PLANET_RECOMMENDED_POWER.get(current_planet, 100)
-	var highest_completed: int = -1
-	if SaveManager:
-		highest_completed = SaveManager.get_highest_planet_completed()
-	var player_power: int = HERO_POWER_PER_PLANET.get(highest_completed, HERO_POWER_PER_PLANET[-1]).power
+	# var recommended_power: int = PLANET_RECOMMENDED_POWER.get(current_planet, 100)
+	# var highest_completed: int = -1
+	# if SaveManager:
+	# 	highest_completed = SaveManager.get_highest_planet_completed()
+	# var player_power: int = HERO_POWER_PER_PLANET.get(highest_completed, HERO_POWER_PER_PLANET[-1]).power
 	
-	var power_label := Label.new()
-	power_label.name = "PowerLabel"
-	var power_color: Color
-	if player_power >= recommended_power:
-		power_color = Color(0.3, 1.0, 0.5)  # Vert - bon niveau
-	elif player_power >= recommended_power * 0.8:
-		power_color = Color(1.0, 0.9, 0.3)  # Jaune - faisable
-	else:
-		power_color = Color(1.0, 0.4, 0.3)  # Rouge - difficile
-	power_label.text = "⚡ %d / %d" % [player_power, recommended_power]
-	power_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	power_label.add_theme_font_size_override("font_size", 12)
-	power_label.add_theme_color_override("font_color", power_color)
-	center_section.add_child(power_label)
+	# var power_label := Label.new()
+	# power_label.name = "PowerLabel"
+	# var power_color: Color
+	# if player_power >= recommended_power:
+	# 	power_color = Color(0.3, 1.0, 0.5)  # Vert - bon niveau
+	# elif player_power >= recommended_power * 0.8:
+	# 	power_color = Color(1.0, 0.9, 0.3)  # Jaune - faisable
+	# else:
+	# 	power_color = Color(1.0, 0.4, 0.3)  # Rouge - difficile
+	# power_label.text = "⚡ %d / %d" % [player_power, recommended_power]
+	# power_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# power_label.add_theme_font_size_override("font_size", 12)
+	# power_label.add_theme_color_override("font_color", power_color)
+	# center_section.add_child(power_label)
 	
 	wave_label = Label.new()
 	wave_label.text = "⚔️ WAVE %d / %d" % [current_wave, total_waves]
@@ -642,17 +613,12 @@ func _create_top_hud(parent: Control) -> void:
 	enemy_section.add_theme_constant_override("separation", 3)
 	hbox.add_child(enemy_section)
 	
-	var enemy_title := Label.new()
-	enemy_title.text = "ENEMIES 👾"
-	enemy_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	enemy_title.add_theme_font_size_override("font_size", 13)
-	enemy_title.add_theme_color_override("font_color", Color(1.0, 0.7, 0.7))
-	enemy_section.add_child(enemy_title)
-	
-	enemy_hp_bar = _create_styled_progress_bar(Color(0.9, 0.2, 0.2), 200, 25)
-	enemy_hp_bar.name = "EnemyHPBar"
-	enemy_hp_bar.fill_mode = ProgressBar.FILL_END_TO_BEGIN
-	enemy_section.add_child(enemy_hp_bar)
+	# var enemy_title := Label.new()
+	# enemy_title.text = "ENEMIES 👾"
+	# enemy_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# enemy_title.add_theme_font_size_override("font_size", 13)
+	# enemy_title.add_theme_color_override("font_color", Color(1.0, 0.7, 0.7))
+	# enemy_section.add_child(enemy_title)
 	
 	# Monnaie (coin supérieur droit)
 	currency_label = Label.new()
@@ -805,34 +771,43 @@ func _create_skill_button(skill_data: Dictionary) -> Button:
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.text = skill_data.icon + "\n" + skill_data.name
 	
+	# --- PIXEL ART STYLE ---
 	var style := StyleBoxFlat.new()
-	style.bg_color = skill_data.color.darkened(0.6)
-	style.border_width_left = 3
-	style.border_width_top = 3
-	style.border_width_right = 3
-	style.border_width_bottom = 3
-	style.border_color = skill_data.color
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
+	style.bg_color = skill_data.color.lightened(0.1)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(1,1,1) # Blanc net
+	style.corner_radius_top_left = 0
+	style.corner_radius_top_right = 0
+	style.corner_radius_bottom_left = 0
+	style.corner_radius_bottom_right = 0
 	btn.add_theme_stylebox_override("normal", style)
-	
+
 	var hover_style := style.duplicate()
-	hover_style.bg_color = skill_data.color.darkened(0.3)
+	hover_style.bg_color = skill_data.color
 	btn.add_theme_stylebox_override("hover", hover_style)
-	
+
 	var pressed_style := style.duplicate()
-	pressed_style.bg_color = skill_data.color
+	pressed_style.bg_color = skill_data.color.darkened(0.2)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
-	
+
 	var disabled_style := style.duplicate()
 	disabled_style.bg_color = Color(0.2, 0.2, 0.2, 0.5)
 	disabled_style.border_color = Color(0.4, 0.4, 0.4)
 	btn.add_theme_stylebox_override("disabled", disabled_style)
-	
-	btn.add_theme_font_size_override("font_size", 14)
-	btn.add_theme_color_override("font_color", Color.WHITE)
+
+	# Police pixel art si dispo
+	var pixel_font_path := "res://assets/fonts/pixel_font.tres"
+	if ResourceLoader.exists(pixel_font_path):
+		var pixel_font = load(pixel_font_path)
+		btn.add_theme_font_override("font", pixel_font)
+		btn.add_theme_font_size_override("font_size", 16)
+	else:
+		btn.add_theme_font_size_override("font_size", 16)
+
+	btn.add_theme_color_override("font_color", Color(1,1,1))
 	
 	# Connecter le bouton
 	btn.pressed.connect(_on_skill_pressed.bind(skill_data))
@@ -1016,7 +991,7 @@ func _create_punishment_overlay(parent: Control) -> void:
 	punishment_overlay = ColorRect.new()
 	punishment_overlay.name = "PunishmentOverlay"
 	punishment_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	punishment_overlay.color = Color(0.2, 0.0, 0.0, 0.0)
+	punishment_overlay.color = Color(0.2, 0.0, 0.0, 0.0)  # Invisible by default (alpha=0)
 	punishment_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(punishment_overlay)
 	
@@ -1362,24 +1337,14 @@ func _update_skill_cooldowns(delta: float) -> void:
 func _update_hp_displays() -> void:
 	# Hero HP
 	if hero and hero.base_stats:
-		hero_hp_bar.max_value = hero.base_stats.max_hp
-		hero_hp_bar.value = hero.current_hp
-		
-		# Changer la couleur de la barre selon le pourcentage
 		var hp_ratio := float(hero.current_hp) / float(hero.base_stats.max_hp)
-		var fill_style: StyleBoxFlat = hero_hp_bar.get_theme_stylebox("fill")
-		if fill_style:
-			if hp_ratio <= 0.25:
-				fill_style.bg_color = Color(0.9, 0.2, 0.2)  # Rouge critique
-			elif hp_ratio <= 0.5:
-				fill_style.bg_color = Color(0.9, 0.6, 0.2)  # Orange warning
-			else:
-				fill_style.bg_color = Color(0.2, 0.9, 0.3)  # Vert normal
 		
-		# Update hero HP bar above sprite
+			# Update hero HP bar above sprite
 		var hp_fill: ColorRect = hero.get_node_or_null("HeroVisual/HPFill")
 		if hp_fill:
-			hp_fill.size.x = 78 * hp_ratio
+			var hp_bg: ColorRect = hero.get_node_or_null("HeroVisual/HPBackground")
+			var max_width: float = hp_bg.size.x - 2 if hp_bg else 128.0
+			hp_fill.size.x = max_width * hp_ratio
 			# Même logique de couleur
 			if hp_ratio <= 0.25:
 				hp_fill.color = Color(0.9, 0.2, 0.2)
@@ -1388,16 +1353,7 @@ func _update_hp_displays() -> void:
 			else:
 				hp_fill.color = Color(0.2, 0.9, 0.3)
 	
-	# Enemy HP total
-	var total_hp := 0
-	var total_max := 0
-	for enemy in active_enemies:
-		if is_instance_valid(enemy) and enemy.is_alive and enemy.base_stats:
-			total_hp += enemy.current_hp
-			total_max += enemy.base_stats.max_hp
-	
-	enemy_hp_bar.max_value = maxi(total_max, 1)
-	enemy_hp_bar.value = total_hp
+
 
 
 func _update_punishment_display() -> void:
@@ -2377,9 +2333,11 @@ func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
 		hp_text.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		vbox.add_child(hp_text)
 	
-	# Positionner dans le container des ennemis
-	var y_offset: float = -20.0 if is_final_boss else 30.0
-	visual.position = Vector2(-20 if is_final_boss else 0, y_offset)
+	# Positionner le boss à y = 0.55 du viewport (aligné avec héros/ennemis)
+	visual.position = Vector2(
+		(viewport_size.x * 0.5) - (visual.size.x * 0.5),
+		(viewport_size.y * 0.55) - (visual.size.y * 0.5)
+	)
 	boss.add_child(visual)
 	
 	enemy_visuals[boss] = visual
