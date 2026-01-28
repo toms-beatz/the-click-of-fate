@@ -22,11 +22,56 @@ const LEVEL_SELECT_SCENE := "res://scenes/ui/level_select.tscn"
 ## Scène des options
 const OPTIONS_SCENE := "res://scenes/ui/options_menu.tscn"
 
+## Background
+var background_layer: CanvasLayer
+var background_rect: TextureRect
+const BACKGROUND_PATH := "res://assets/backgrounds/background-menu-selection.png"
+
 
 func _ready() -> void:
+	_create_background()
 	_connect_signals()
 	_update_currency_display()
 	_animate_entrance()
+
+
+func _exit_tree() -> void:
+	# Nettoyer le CanvasLayer du background
+	if background_layer and is_instance_valid(background_layer):
+		background_layer.queue_free()
+
+
+## Crée et ajoute le background avec opacité - Layer séparé pour éviter les problèmes d'animation
+func _create_background() -> void:
+	# Créer un CanvasLayer séparé pour le background (couche -1 = derrière tout)
+	background_layer = CanvasLayer.new()
+	background_layer.name = "BackgroundLayer"
+	background_layer.layer = -1  # Derrière tout le reste
+	add_child(background_layer)
+	
+	# Créer le TextureRect pour afficher le background
+	background_rect = TextureRect.new()
+	background_rect.name = "BackgroundImage"
+	
+	# Charger la texture
+	var bg_texture = load(BACKGROUND_PATH)
+	if bg_texture:
+		background_rect.texture = bg_texture
+	else:
+		push_warning("Background non trouvé: " + BACKGROUND_PATH)
+		return
+	
+	# Configuration pour couvrir tout l'écran
+	background_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	background_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Taille = viewport entier
+	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var viewport_size := get_viewport().get_visible_rect().size
+	background_rect.size = viewport_size
+	
+	background_layer.add_child(background_rect)
 
 
 func _connect_signals() -> void:
