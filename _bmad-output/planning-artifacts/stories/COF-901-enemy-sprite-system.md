@@ -28,7 +28,7 @@ Remplacer les `ColorRect` placeholder par de vrais sprites PNG pour les ennemis 
 
 | Planète | Fichiers | Status |
 |---------|----------|--------|
-| Mercury | `mercury-sprites-standing.png`, `mercury-sprites-shooting.png`, `mercury-sprites-on-knee.png` | ❌ MANQUANT |
+| Mercury | `mercury-sprites-standing.png`, `mercury-sprites-shooting.png`, `mercury-sprites-on-knee.png` | ✅ PRÉSENT |
 | Venus | `venus-sprites-standing.png`, `venus-sprites-shooting.png`, `venus-sprites-on-knee.png` | ✅ PRÉSENT |
 | Mars | `mars-sprites-standing.png`, `mars-sprites-shooting.png`, `mars-sprites-before-shooting.png` | ✅ PRÉSENT |
 | Earth | `earth-sprites-standing.png`, `earth-sprites-shooting.png`, `earth-sprites-on-knee.png` | ✅ PRÉSENT |
@@ -167,7 +167,7 @@ func _spawn_spaceship(random_position: bool) -> void:
 ## Tâches Restantes
 
 ### Priorité Haute
-1. [ ] Créer sprites Mercury (3 poses)
+1. [x] ~~Créer sprites Mercury (3 poses)~~ ✅ FAIT
 2. [ ] Créer sprites Dr. Mortis (4 poses minimum)
 3. [x] ~~Animer les transitions de poses ennemis~~ ✅ FAIT
 

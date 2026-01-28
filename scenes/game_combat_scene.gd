@@ -100,6 +100,11 @@ var current_hero_pose: HeroPose = HeroPose.IDLE
 
 ## Enemy Sprite System - sprites par planète
 const ENEMY_SPRITES := {
+	0: {  # Mercury (index 0)
+		"standing": "res://assets/sprites/enemies/mercury-sprites-standing.png",
+		"shooting": "res://assets/sprites/enemies/mercury-sprites-shooting.png",
+		"hurt": "res://assets/sprites/enemies/mercury-sprites-on-knee.png"
+	},
 	1: {  # Venus (index 1)
 		"standing": "res://assets/sprites/enemies/venus-sprites-standing.png",
 		"shooting": "res://assets/sprites/enemies/venus-sprites-shooting.png",

@@ -92,14 +92,17 @@ var is_swiping: bool = false
 ## Seuil de swipe pour changer de planète
 const SWIPE_THRESHOLD := 80.0
 
-## Espacement entre les planètes dans le carrousel
-const PLANET_SPACING := 200.0
+## Pourcentage de la largeur d'écran pour la planète centrale
+const PLANET_SIZE_PERCENT := 0.70  # 70% de la largeur
 
-## Taille de la planète centrale
-const PLANET_SIZE_CENTER := 160.0
+## Taille de la planète centrale (calculée dynamiquement)
+var planet_size_center: float = 160.0
 
-## Taille des planètes sur les côtés
-const PLANET_SIZE_SIDE := 100.0
+## Taille des planètes sur les côtés (calculée dynamiquement)
+var planet_size_side: float = 100.0
+
+## Espacement entre les planètes (calculé dynamiquement)
+var planet_spacing: float = 200.0
 
 ## Vaisseaux d'arrière-plan
 const SPACESHIP_SPRITES := [
@@ -124,9 +127,18 @@ func _ready() -> void:
 	_update_displays()
 	# Attendre que le carousel_container ait sa taille
 	await get_tree().process_frame
+	_calculate_planet_sizes()
 	_create_spaceships_background()
 	_create_planet_carousel()
 	_animate_entrance()
+
+
+## Calcule les tailles des planètes en fonction de l'écran
+func _calculate_planet_sizes() -> void:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	planet_size_center = viewport_size.x * PLANET_SIZE_PERCENT
+	planet_size_side = planet_size_center * 0.5  # Planètes sur les côtés = 50% de la centrale
+	planet_spacing = planet_size_center * 0.8  # Espacement proportionnel
 
 
 func _connect_signals() -> void:
@@ -212,15 +224,16 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 	# Container principal
 	var container := Control.new()
 	container.name = "Planet_%d" % index
-	container.custom_minimum_size = Vector2(PLANET_SIZE_CENTER, PLANET_SIZE_CENTER)
-	container.size = Vector2(PLANET_SIZE_CENTER, PLANET_SIZE_CENTER)
+	container.custom_minimum_size = Vector2(planet_size_center, planet_size_center)
+	container.size = Vector2(planet_size_center, planet_size_center)
 	
-	# Anneau extérieur (glow)
+	# Anneau extérieur (glow) - pas nécessaire avec les vrais sprites
 	var ring := Control.new()
 	ring.name = "Ring"
-	ring.custom_minimum_size = Vector2(PLANET_SIZE_CENTER + 30, PLANET_SIZE_CENTER + 30)
-	ring.size = Vector2(PLANET_SIZE_CENTER + 30, PLANET_SIZE_CENTER + 30)
+	ring.custom_minimum_size = Vector2(planet_size_center + 30, planet_size_center + 30)
+	ring.size = Vector2(planet_size_center + 30, planet_size_center + 30)
 	ring.position = Vector2(-15, -15)
+	ring.visible = false  # Cacher l'anneau quand on a un sprite
 	container.add_child(ring)
 	
 	var ring_bg := ColorRect.new()
@@ -244,7 +257,8 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		
 		container.add_child(planet_sprite)
 	else:
-		# Fallback: ColorRect si pas de sprite
+		# Fallback: ColorRect si pas de sprite (montrer l'anneau)
+		ring.visible = true
 		var planet_visual := ColorRect.new()
 		planet_visual.name = "PlanetVisual"
 		planet_visual.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -261,9 +275,10 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		var check_label := Label.new()
 		check_label.name = "Check"
 		check_label.text = "✓"
-		check_label.add_theme_font_size_override("font_size", 32)
+		var check_size: int = int(planet_size_center * 0.15)
+		check_label.add_theme_font_size_override("font_size", check_size)
 		check_label.add_theme_color_override("font_color", Color.GREEN)
-		check_label.position = Vector2(PLANET_SIZE_CENTER - 35, 5)
+		check_label.position = Vector2(planet_size_center - check_size - 10, 5)
 		container.add_child(check_label)
 	
 	# Cadenas si verrouillé
@@ -300,15 +315,15 @@ func _update_carousel_positions(animate: bool = true) -> void:
 		var offset := i - current_index
 		
 		# Position cible (centré sur la planète)
-		var target_x := center_x + (offset * PLANET_SPACING) - PLANET_SIZE_CENTER / 2
-		var target_y := center_y - PLANET_SIZE_CENTER / 2
+		var target_x := center_x + (offset * planet_spacing) - planet_size_center / 2
+		var target_y := center_y - planet_size_center / 2
 		
 		# Scale selon la distance du centre
 		var distance := absf(offset)
-		var target_scale := 1.0 if distance == 0 else maxf(0.55, 1.0 - distance * 0.3)
+		var target_scale := 1.0 if distance == 0 else maxf(0.4, 1.0 - distance * 0.4)
 		
 		# Opacité selon la distance
-		var target_alpha := 1.0 if distance == 0 else maxf(0.35, 1.0 - distance * 0.35)
+		var target_alpha := 1.0 if distance == 0 else maxf(0.25, 1.0 - distance * 0.4)
 		
 		# Z-index (centre devant)
 		node.z_index = 10 - int(distance)
