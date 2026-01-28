@@ -193,24 +193,24 @@ const ENDING_CINEMATIC := [
 ## Cinématiques par planète
 const PLANET_CINEMATICS := {
 	0: [  # Mercury
-		{"text": "My name is Zyx-7. I had a family once... a beautiful colony on the outer rim.", "emoji": "👽"},
-		{"text": "Until HE came. Dr. Mortis. A human scientist who destroyed everything I loved.", "emoji": "💔"},
-		{"text": "Now I hunt him across the stars. Mercury is my first stop...", "emoji": "🚀"},
+		{"text": "My name is Zyx-7. I had a family once... a beautiful colony on the outer rim.", "emoji": "👽", "character": "zyx"},
+		{"text": "Until HE came. Dr. Mortis. A human scientist who destroyed everything I loved.", "emoji": "💔", "character": "mortis"},
+		{"text": "Now I hunt him across the stars. Mercury is my first stop...", "emoji": "🚀", "character": "zyx"},
 	],
 	1: [  # Venus
-		{"text": "Mercury's colony knew nothing. But they mentioned Venus...", "emoji": "🔍"},
-		{"text": "Dr. Mortis has been building something here. Toxic experiments.", "emoji": "☠️"},
-		{"text": "I will tear through his creations until I find him.", "emoji": "😤"},
+		{"text": "Mercury's colony knew nothing. But they mentioned Venus...", "emoji": "🔍", "character": "zyx"},
+		{"text": "Dr. Mortis has been building something here. Toxic experiments.", "emoji": "☠️", "character": "mortis"},
+		{"text": "I will tear through his creations until I find him.", "emoji": "😤", "character": "zyx"},
 	],
 	2: [  # Mars
-		{"text": "Venus was another dead end. But I found records... Mars.", "emoji": "📜"},
-		{"text": "His main research facility. Where he perfected his weapons.", "emoji": "🔬"},
-		{"text": "The weapons he used on my family. He WILL pay.", "emoji": "🔥"},
+		{"text": "Venus was another dead end. But I found records... Mars.", "emoji": "📜", "character": "zyx"},
+		{"text": "His main research facility. Where he perfected his weapons.", "emoji": "🔬", "character": "mortis"},
+		{"text": "The weapons he used on my family. He WILL pay.", "emoji": "🔥", "character": "zyx"},
 	],
 	3: [  # Earth
-		{"text": "This is it. Earth. His homeworld. His fortress.", "emoji": "🌍"},
-		{"text": "Dr. Mortis is here. I can feel it. After all these years...", "emoji": "👁️"},
-		{"text": "Today, my family will be avenged. Today, HE DIES.", "emoji": "💀"},
+		{"text": "This is it. Earth. His homeworld. His fortress.", "emoji": "🌍", "character": "zyx"},
+		{"text": "Dr. Mortis is here. I can feel it. After all these years...", "emoji": "👁️", "character": "mortis"},
+		{"text": "Today, my family will be avenged. Today, HE DIES.", "emoji": "💀", "character": "zyx"},
 	],
 }
 
@@ -2054,41 +2054,164 @@ func _show_cinematic_slide() -> void:
 	
 	var slide_data: Dictionary = slides[cinematic_slide_index]
 	
-	# Background
+	# Fond stylisé (dégradé ou image DA)
 	var bg := ColorRect.new()
-	bg.color = Color(0, 0, 0, 0.95)
+	bg.color = Color(0.08, 0.10, 0.18, 0.98)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_STOP
 	cinematic_layer.add_child(bg)
-	
-	# Container centré
+
+	# Panneau pixel art responsive (anchors full rect, marges internes via MarginContainer)
+	var viewport_size: Vector2 = get_viewport().size
+	var margin_x: float = clamp(viewport_size.x * 0.05, 12, 40)
+	var margin_y: float = clamp(viewport_size.y * 0.08, 12, 40)
+
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.13, 0.15, 0.22, 0.96)
+	style.border_color = Color(0.4, 0.7, 1.0)
+	style.set_border_width_all(4)
+	style.set_corner_radius_all(12)
+	panel.add_theme_stylebox_override("panel", style)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
+	cinematic_layer.add_child(panel)
+
+	# Marges internes pour le contenu
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", int(margin_x))
+	margin.add_theme_constant_override("margin_right", int(margin_x))
+	margin.add_theme_constant_override("margin_top", int(margin_y))
+	margin.add_theme_constant_override("margin_bottom", int(margin_y))
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(margin)
+
+	# Contenu centré dans le panneau
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	cinematic_layer.add_child(center)
-	
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 30)
-	center.add_child(vbox)
-	
-	# Emoji géant
+	margin.add_child(center)
+
+	# Largeur max du contenu (évite d'étirer sur desktop)
+	var content_box := VBoxContainer.new()
+	content_box.add_theme_constant_override("separation", 18)
+	content_box.custom_minimum_size.x = min(540, viewport_size.x - margin_x * 2)
+	center.add_child(content_box)
+
+	# Largeur de référence pour le contenu
+	var content_w: float = content_box.custom_minimum_size.x
+
+	# Emoji toujours affiché en haut (petit)
 	var emoji := Label.new()
 	emoji.text = slide_data.emoji
 	emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	emoji.add_theme_font_size_override("font_size", 80)
-	vbox.add_child(emoji)
+	var emoji_size: int = int(clamp(content_w * 0.10, 28, 48))
+	emoji.add_theme_font_size_override("font_size", emoji_size)
+	content_box.add_child(emoji)
+
+	var character_name: String = slide_data.get("character", "")
+	var panel_h: float = panel.size.y if panel.size.y > 0 else viewport_size.y
+	# Increase max_h to allow larger portraits on small viewports; previously capped at 64 (too small)
+	var max_h: float = min(panel_h * 0.30, 220)
+	var max_w: float = content_w * 0.4
+	if character_name == "mortis":
+		var portrait := TextureRect.new()
+		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		# Portrait Mortis: taille raisonnable (légèrement plus petit que le contenu)
+		portrait.custom_minimum_size = Vector2(max_w * 0.9, max_h * 0.9)
+		portrait.expand = true
+		portrait.size_flags_horizontal = Control.SIZE_FILL
+		portrait.size_flags_vertical = Control.SIZE_FILL
+		var portrait_path := "res://assets/sprites/enemies/mini-boss.png"
+		if ResourceLoader.exists(portrait_path):
+			var tex = ResourceLoader.load(portrait_path)
+			if tex and (tex is Texture or tex is Texture2D):
+				portrait.texture = tex
+				portrait.visible = true
+				content_box.add_child(portrait)
+				var portrait_spacer := Control.new()
+				portrait_spacer.custom_minimum_size.y = 8
+				content_box.add_child(portrait_spacer)
+			else:
+				push_warning("Portrait Mortis introuvable ou invalide: %s" % portrait_path)
+				# Fallback emoji si la texture est corrompue/invalide
+				var mortis_emoji := Label.new()
+				mortis_emoji.text = "🧟‍♂️"
+				mortis_emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				var mortis_size: int = int(clamp(content_w * 0.22, 48, 96))
+				mortis_emoji.add_theme_font_size_override("font_size", mortis_size)
+				content_box.add_child(mortis_emoji)
+				var mortis_spacer := Control.new()
+				mortis_spacer.custom_minimum_size.y = 8
+				content_box.add_child(mortis_spacer)
+		else:
+			push_warning("Portrait Mortis introuvable: %s" % portrait_path)
+			var mortis_emoji := Label.new()
+			mortis_emoji.text = "🧟‍♂️"
+			mortis_emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var mortis_size2: int = int(clamp(content_w * 0.22, 48, 96))
+			mortis_emoji.add_theme_font_size_override("font_size", mortis_size2)
+			content_box.add_child(mortis_emoji)
+			var mortis_spacer2 := Control.new()
+			mortis_spacer2.custom_minimum_size.y = 8
+			content_box.add_child(mortis_spacer2)
+	else:
+		var portrait := TextureRect.new()
+		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		# Agrandir significativement le portrait du héros (alien)
+		var hero_scale: float = 2.0
+		portrait.custom_minimum_size = Vector2(max_w * hero_scale, max_h * hero_scale)
+		portrait.expand = true
+		portrait.size_flags_horizontal = Control.SIZE_FILL
+		portrait.size_flags_vertical = Control.SIZE_FILL
+		var portrait_path := "res://assets/sprites/hero/hero_ready.png"
+		if ResourceLoader.exists(portrait_path):
+			var tex_h = ResourceLoader.load(portrait_path)
+			if tex_h and (tex_h is Texture or tex_h is Texture2D):
+				portrait.texture = tex_h
+				portrait.visible = true
+				content_box.add_child(portrait)
+				var portrait_spacer := Control.new()
+				portrait_spacer.custom_minimum_size.y = 8
+				content_box.add_child(portrait_spacer)
+			else:
+				# Fallback emoji si la texture du héros est invalide
+				var zyx_emoji := Label.new()
+				zyx_emoji.text = "👽"
+				zyx_emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				var zyx_size: int = int(clamp(content_w * 0.30, 64, 140))
+				zyx_emoji.add_theme_font_size_override("font_size", zyx_size)
+				content_box.add_child(zyx_emoji)
+				var zyx_spacer := Control.new()
+				zyx_spacer.custom_minimum_size.y = 8
+				content_box.add_child(zyx_spacer)
+				push_warning("Portrait Zyx-7 invalide: %s" % portrait_path)
+		else:
+			# Fallback emoji si le sprite du héros n'existe pas
+			var zyx_emoji := Label.new()
+			zyx_emoji.text = "👽"
+			zyx_emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var zyx_size: int = int(clamp(content_w * 0.30, 64, 140))
+			zyx_emoji.add_theme_font_size_override("font_size", zyx_size)
+			content_box.add_child(zyx_emoji)
+			var zyx_spacer2 := Control.new()
+			zyx_spacer2.custom_minimum_size.y = 8
+			content_box.add_child(zyx_spacer2)
+			push_warning("Portrait Zyx-7 introuvable: %s" % portrait_path)
 	
-	# Texte avec effet machine à écrire
+	# Texte avec effet machine à écrire (toujours visible)
 	var text_label := Label.new()
 	text_label.name = "CinematicText"
 	text_label.text = ""
 	text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text_label.custom_minimum_size.x = mini(400, get_viewport().size.x - 60)  # Adaptatif
-	text_label.add_theme_font_size_override("font_size", 18)  # Un peu plus petit
+	text_label.custom_minimum_size.x = content_w * 0.9
+	var font_size: int = int(clamp(content_w * 0.045, 14, 26))
+	text_label.add_theme_font_size_override("font_size", font_size)
 	text_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
-	vbox.add_child(text_label)
-	
-	# Animation de typewriter
+	content_box.add_child(text_label)
 	var full_text: String = slide_data.text
 	_typewriter_effect(text_label, full_text)
 	
@@ -2099,28 +2222,28 @@ func _show_cinematic_slide() -> void:
 	planet_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	planet_indicator.add_theme_font_size_override("font_size", 14)
 	planet_indicator.add_theme_color_override("font_color", PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).accent)
-	vbox.add_child(planet_indicator)
+	content_box.add_child(planet_indicator)
 	
 	# Spacer
 	var spacer := Control.new()
 	spacer.custom_minimum_size.y = 40
-	vbox.add_child(spacer)
+	content_box.add_child(spacer)
 	
 	# Bouton continuer
 	var continue_btn := Button.new()
 	continue_btn.text = "TAP TO CONTINUE ▶"
-	continue_btn.custom_minimum_size = Vector2(250, 50)
-	
+	continue_btn.custom_minimum_size = Vector2(clamp(content_w * 0.5, 120, 320), 44)
+
 	var btn_style := StyleBoxFlat.new()
 	btn_style.bg_color = Color(0.2, 0.4, 0.6, 0.8)
 	btn_style.border_color = Color(0.4, 0.7, 1.0)
 	btn_style.set_border_width_all(2)
 	btn_style.set_corner_radius_all(10)
 	continue_btn.add_theme_stylebox_override("normal", btn_style)
-	continue_btn.add_theme_font_size_override("font_size", 16)
+	continue_btn.add_theme_font_size_override("font_size", int(clamp(content_w * 0.045, 14, 22)))
 	continue_btn.add_theme_color_override("font_color", Color.WHITE)
 	continue_btn.pressed.connect(_on_cinematic_continue)
-	vbox.add_child(continue_btn)
+	content_box.add_child(continue_btn)
 	
 	# Compteur de slides
 	var slide_counter := Label.new()
@@ -2128,7 +2251,7 @@ func _show_cinematic_slide() -> void:
 	slide_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	slide_counter.add_theme_font_size_override("font_size", 12)
 	slide_counter.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	vbox.add_child(slide_counter)
+	content_box.add_child(slide_counter)
 
 
 func _typewriter_effect(label: Label, full_text: String) -> void:

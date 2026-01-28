@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://level_select"]
+[gd_scene load_steps=2 format=3 uid="uid://cetx8q5qq7crx"]
 
-[ext_resource type="Script" path="res://scripts/ui/level_select.gd" id="1_level"]
+[ext_resource type="Script" uid="uid://cvfqungh8iqcu" path="res://scripts/ui/level_select.gd" id="1_level"]
 
 [node name="LevelSelect" type="Control"]
 layout_mode = 3
@@ -11,8 +11,8 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_level")
 
-
 [node name="BackgroundImage" type="TextureRect" parent="."]
+modulate = Color(1, 1, 1, 0.5)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,16 +21,14 @@ grow_horizontal = 2
 grow_vertical = 2
 expand_mode = 1
 stretch_mode = 1
-modulate = Color(1, 1, 1, 0.5)
-mouse_filter = 1
 
 [node name="SpaceshipsBackground" type="Control" parent="."]
-anchors_preset = 15
+z_index = -10
+anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-z_index = -10
 mouse_filter = 1
 
 [node name="SafeAreaMargin" type="MarginContainer" parent="."]
@@ -71,8 +69,8 @@ layout_mode = 2
 [node name="PowerLabel" type="Label" parent="SafeAreaMargin/MainVBox/TopBar/StatsPanel/PowerPanel"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(1, 0.8, 0.3, 1)
+theme_override_font_sizes/font_size = 18
 text = "⚔ 100"
 
 [node name="CurrencyPanel" type="PanelContainer" parent="SafeAreaMargin/MainVBox/TopBar/StatsPanel"]
@@ -96,8 +94,8 @@ alignment = 1
 
 [node name="LeftArrow" type="Button" parent="SafeAreaMargin/MainVBox/CarouselSection/CarouselRow"]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 32
 text = "‹"
@@ -110,8 +108,8 @@ size_flags_vertical = 3
 
 [node name="RightArrow" type="Button" parent="SafeAreaMargin/MainVBox/CarouselSection/CarouselRow"]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 32
 text = "›"
@@ -130,16 +128,16 @@ horizontal_alignment = 1
 [node name="DifficultyLabel" type="Label" parent="SafeAreaMargin/MainVBox/PlanetInfoSection"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 22
 text = "★☆☆☆"
 horizontal_alignment = 1
 
 [node name="PlanetDescLabel" type="Label" parent="SafeAreaMargin/MainVBox/PlanetInfoSection"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 18
 text = "Fast and aggressive enemies"
 horizontal_alignment = 1
 
@@ -156,15 +154,15 @@ theme_override_constants/separation = 15
 
 [node name="PlayButton" type="Button" parent="SafeAreaMargin/MainVBox/ButtonSection"]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(0, 65)
+layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = "▶ PLAY"
 
 [node name="SwipeHint" type="Label" parent="SafeAreaMargin/MainVBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+theme_override_font_sizes/font_size = 14
 text = "← Swipe to change planet →"
 horizontal_alignment = 1
 
@@ -174,24 +172,24 @@ theme_override_constants/separation = 20
 
 [node name="HomeButton" type="Button" parent="SafeAreaMargin/MainVBox/BottomNavBar"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 60)
 theme_override_font_sizes/font_size = 20
 text = "🏠 Home"
 
 [node name="ShopButton" type="Button" parent="SafeAreaMargin/MainVBox/BottomNavBar"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 60)
 theme_override_font_sizes/font_size = 20
 text = "🛒 Shop"
 
 [node name="ProfileButton" type="Button" parent="SafeAreaMargin/MainVBox/BottomNavBar"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 60)
 theme_override_font_sizes/font_size = 20
 text = "👤 Profil"
