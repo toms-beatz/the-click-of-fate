@@ -125,6 +125,7 @@ var spaceship_timer: float = 0.0
 func _ready() -> void:
 	_connect_signals()
 	_update_displays()
+	_create_background()
 	# Attendre que le carousel_container ait sa taille
 	await get_tree().process_frame
 	_calculate_planet_sizes()
@@ -151,6 +152,25 @@ func _connect_signals() -> void:
 	
 	if SaveManager:
 		SaveManager.currency_changed.connect(_on_currency_changed)
+
+
+## Crée et ajoute le background avec opacité
+var background_rect: TextureRect  # Référence pour l'animation
+
+func _create_background() -> void:
+	var bg_texture = load("res://assets/sprites/background/background-menu-selection.png")
+	if bg_texture:
+		background_rect = TextureRect.new()
+		background_rect.name = "BackgroundImage"
+		background_rect.texture = bg_texture
+		background_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		background_rect.stretch_mode = TextureRect.STRETCH_SCALE
+		background_rect.modulate = Color(1.0, 1.0, 1.0, 0.5)  # 50% d'opacité
+		background_rect.z_index = -20  # Encore plus derrière que les vaisseaux (-10)
+		background_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(background_rect)
+		move_child(background_rect, 0)  # Déplace en premier enfant (fond)
 
 
 func _update_displays() -> void:
@@ -500,9 +520,12 @@ func _animate_button(button: Button) -> void:
 
 
 func _animate_entrance() -> void:
-	modulate.a = 0.0
-	var tween := create_tween()
-	tween.tween_property(self, "modulate:a", 1.0, 0.3)
+	# Animer seulement les éléments UI, pas le background
+	# On anime le carousel et les boutons directement
+	if carousel_container:
+		carousel_container.modulate.a = 0.0
+		var carousel_tween := create_tween()
+		carousel_tween.tween_property(carousel_container, "modulate:a", 1.0, 0.3)
 	
 	# Animer les planètes avec un effet "pop"
 	for i in range(planet_nodes.size()):
@@ -522,10 +545,10 @@ func _create_spaceships_background() -> void:
 	spaceships_container = Control.new()
 	spaceships_container.name = "SpaceshipsBackground"
 	spaceships_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	spaceships_container.z_index = -10  # Derrière tout
+	spaceships_container.z_index = -10  # Derrière le contenu, devant le background
 	spaceships_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(spaceships_container)
-	move_child(spaceships_container, 0)  # Premier enfant = plus en arrière
+	move_child(spaceships_container, 1)  # Après le background (index 0)
 	
 	# Spawner quelques vaisseaux initiaux
 	for i in range(4):
