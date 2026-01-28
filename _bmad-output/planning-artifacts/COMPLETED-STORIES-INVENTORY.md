@@ -9,16 +9,41 @@
 ## 📊 Résumé Exécutif
 
 | Catégorie | Stories | Statut |
+|-----------|---------|--------|
+| Core Combat System | 12 | ✅ Complété |
+| UI/UX System | 15 | ✅ Complété |
+| Progression System | 8 | ✅ Complété |
+| Boss System | 5 | ✅ Complété |
+| Enemy System | 6 | ✅ Complété |
+| Cinematics | 3 | ✅ Complété |
+| Save & Persistence | 7 | ✅ Complété |
+| Shop & Economy | 4 | ✅ Complété |
+| **Visual Assets** | **1** | 🔄 En cours |
+| **TOTAL** | **61** | 🔄 |
 
-| Core Combat System | 12 | ✅ Complété ||-----------|---------|--------|
+---
 
-| UI/UX System | 15 | ✅ Complété || Progression System | 8 | ✅ Complété |
+## 🎨 EPIC 9: Visual Assets (NOUVEAU)
 
-| Boss System | 5 | ✅ Complété || Enemy System | 6 | ✅ Complété |
+### COF-901: Enemy Sprite System
 
-| Cinematics | 3 | ✅ Complété || Save & Persistence | 7 | ✅ Complété |
+**Fichier**: [stories/COF-901-enemy-sprite-system.md](stories/COF-901-enemy-sprite-system.md)  
+**Status**: 🔄 IN PROGRESS
 
-| **TOTAL** | **60** | ✅ || Shop & Economy | 4 | ✅ Complété |
+**En tant que** joueur,  
+**Je veux** voir des sprites uniques pour chaque type d'ennemi,  
+**Afin de** distinguer visuellement les ennemis par planète.
+
+**Critères d'acceptation**:
+- [x] Sprites Venus (3 poses)
+- [x] Sprites Mars (3 poses)
+- [x] Sprites Earth (3 poses)
+- [ ] Sprites Mercury (3 poses) - MANQUANT
+- [x] Sprites Mini-Boss (5 variantes)
+- [ ] Sprites Dr. Mortis - MANQUANT
+- [x] Vaisseaux background (6 variantes)
+- [x] Fallback ColorRect si sprite manquant
+- [x] Vaisseaux animés en arrière-plan du Level Select
 
 ---
 
@@ -26,7 +51,8 @@
 
 ### COF-101: Base Entity System
 
-**Fichier**: [scripts/core/entities/base_entity.gd](../../scripts/core/entities/base_entity.gd)**Status**: ✅ DONE
+**Fichier**: [scripts/core/entities/base_entity.gd](../../scripts/core/entities/base_entity.gd)  
+**Status**: ✅ DONE
 
 **En tant que** système de combat,
 

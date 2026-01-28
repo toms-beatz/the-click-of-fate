@@ -1127,6 +1127,7 @@ func _spawn_enemy(index: int) -> void:
 	enemy.died.connect(_on_enemy_died.bind(enemy))
 	enemy.hp_changed.connect(_on_enemy_hp_changed.bind(enemy))
 	enemy.damaged.connect(_on_enemy_damaged.bind(enemy))
+	enemy.attacked.connect(_on_enemy_attacked.bind(enemy))
 	
 	active_enemies.append(enemy)
 	combat_manager.add_enemy(enemy)
@@ -1426,6 +1427,13 @@ func _on_enemy_damaged(amount: int, is_crit: bool, enemy: BaseEnemy) -> void:
 	
 	_flash_entity(enemy, Color(1.0, 1.0, 1.0))
 	
+	# Changer en sprite "hurt"
+	_set_enemy_sprite_pose(enemy, "hurt")
+	# Revenir à standing après un court délai
+	await get_tree().create_timer(0.2).timeout
+	if is_instance_valid(enemy) and enemy.is_alive:
+		_set_enemy_sprite_pose(enemy, "standing")
+	
 	# Position relative à l'ennemi dans le container
 	var pos := enemy_container.position + enemy.position + Vector2(0, -100)
 	var text := "-%d" % amount
@@ -1451,16 +1459,47 @@ func _on_enemy_hp_changed(_current: int, _max_hp: int, enemy: BaseEnemy) -> void
 		hp_fill.size.x = 58 * ratio
 
 
+## Appelé quand un ennemi attaque - change son sprite en pose "shooting"
+func _on_enemy_attacked(_target: BaseEntity, _damage: int, _is_crit: bool, enemy: BaseEnemy) -> void:
+	if not is_instance_valid(enemy):
+		return
+	_set_enemy_sprite_pose(enemy, "shooting")
+	# Revenir à la pose standing après un court délai
+	await get_tree().create_timer(0.3).timeout
+	if is_instance_valid(enemy) and enemy.is_alive:
+		_set_enemy_sprite_pose(enemy, "standing")
+
+
+## Change le sprite d'un ennemi selon sa pose
+func _set_enemy_sprite_pose(enemy: BaseEnemy, pose: String) -> void:
+	if not is_instance_valid(enemy):
+		return
+	
+	var sprite: TextureRect = enemy.get_node_or_null("EnemyVisual/EnemySprite")
+	if not sprite:
+		return  # Pas de sprite (Mercury utilise ColorRect)
+	
+	var sprite_path: String = enemy.get_meta("sprite_" + pose, "")
+	if sprite_path.is_empty() or not ResourceLoader.exists(sprite_path):
+		return
+	
+	sprite.texture = load(sprite_path)
+
+
 func _on_enemy_died(enemy: BaseEnemy) -> void:
 	active_enemies.erase(enemy)
 	
-	# Animation de mort
+	# Changer en sprite "hurt" avant la mort
+	_set_enemy_sprite_pose(enemy, "hurt")
+	
+	# Animation de mort améliorée
 	var visual: Control = enemy.get_node_or_null("EnemyVisual")
 	if visual:
 		var tween := create_tween()
 		tween.set_parallel(true)
-		tween.tween_property(visual, "modulate:a", 0.0, 0.4)
+		tween.tween_property(visual, "modulate:a", 0.0, 0.5)
 		tween.tween_property(visual, "scale", Vector2(1.3, 0.3), 0.4)
+		tween.tween_property(visual, "rotation", randf_range(-0.3, 0.3), 0.4)
 		tween.chain().tween_callback(enemy.queue_free)
 	
 	# Récompense basée sur la vague
@@ -2107,6 +2146,8 @@ func _spawn_boss() -> void:
 	# Connecter les signaux
 	current_boss.died.connect(_on_boss_died.bind(current_boss))
 	current_boss.hp_changed.connect(_on_boss_hp_changed)  # Signal spécial pour le boss
+	current_boss.attacked.connect(_on_boss_attacked.bind(current_boss))
+	current_boss.damaged.connect(_on_boss_damaged.bind(current_boss))
 	
 	# Annonce du boss - ÉPIQUE pour Dr. Mortis
 	if is_final_boss:
@@ -2383,6 +2424,48 @@ func _on_boss_hp_changed(current_hp: int, max_hp: int) -> void:
 	# Mettre à jour aussi la barre globale des ennemis
 	if current_boss:
 		_on_enemy_hp_changed(current_hp, max_hp, current_boss)
+
+
+## Appelé quand le boss attaque - change son sprite en pose "screaming"
+func _on_boss_attacked(_target: BaseEntity, _damage: int, _is_crit: bool, boss: BaseEnemy) -> void:
+	if not is_instance_valid(boss):
+		return
+	_set_boss_sprite_pose(boss, "screaming")
+	# Revenir à idle après un court délai
+	await get_tree().create_timer(0.4).timeout
+	if is_instance_valid(boss) and boss.is_alive:
+		_set_boss_sprite_pose(boss, "idle")
+
+
+## Appelé quand le boss prend des dégâts
+func _on_boss_damaged(_amount: int, _is_crit: bool, boss: BaseEnemy) -> void:
+	if not is_instance_valid(boss):
+		return
+	# Flash visuel
+	if boss_visual and is_instance_valid(boss_visual):
+		var original_modulate := boss_visual.modulate
+		boss_visual.modulate = Color(1.0, 0.5, 0.5)
+		await get_tree().create_timer(0.15).timeout
+		if is_instance_valid(boss_visual):
+			boss_visual.modulate = original_modulate
+
+
+## Change le sprite du boss selon sa pose
+func _set_boss_sprite_pose(boss: BaseEnemy, pose: String) -> void:
+	if not is_instance_valid(boss) or not boss_visual:
+		return
+	
+	var sprite: TextureRect = boss_visual.find_child("BossSprite", true, false) as TextureRect
+	if not sprite:
+		return  # Pas de sprite (utilise emoji)
+	
+	var sprite_path: String = boss.get_meta("sprite_" + pose, "")
+	if sprite_path.is_empty() or not ResourceLoader.exists(sprite_path):
+		# Essayer depuis la config globale
+		sprite_path = MINIBOSS_SPRITES.get(pose, "")
+	
+	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
+		sprite.texture = load(sprite_path)
 
 
 ## Afficher la cinématique de fin après avoir battu Dr. Mortis
