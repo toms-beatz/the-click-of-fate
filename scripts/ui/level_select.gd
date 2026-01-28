@@ -134,6 +134,12 @@ func _ready() -> void:
 	_animate_entrance()
 
 
+func _exit_tree() -> void:
+	# Nettoyer le CanvasLayer du background
+	if background_layer and is_instance_valid(background_layer):
+		background_layer.queue_free()
+
+
 ## Calcule les tailles des planètes en fonction de l'écran
 func _calculate_planet_sizes() -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
@@ -154,23 +160,43 @@ func _connect_signals() -> void:
 		SaveManager.currency_changed.connect(_on_currency_changed)
 
 
-## Crée et ajoute le background avec opacité
-var background_rect: TextureRect  # Référence pour l'animation
+## Crée et ajoute le background avec opacité - Layer séparé pour éviter les problèmes d'animation
+var background_layer: CanvasLayer
+var background_rect: TextureRect
+
+const BACKGROUND_PATH := "res://assets/sprites/background/background-menu-selection.png"
 
 func _create_background() -> void:
-	var bg_texture = load("res://assets/sprites/background/background-menu-selection.png")
+	# Créer un CanvasLayer séparé pour le background (couche -1 = derrière tout)
+	background_layer = CanvasLayer.new()
+	background_layer.name = "BackgroundLayer"
+	background_layer.layer = -1  # Derrière tout le reste
+	add_child(background_layer)
+	
+	# Créer le TextureRect pour afficher le background
+	background_rect = TextureRect.new()
+	background_rect.name = "BackgroundImage"
+	
+	# Charger la texture
+	var bg_texture = load(BACKGROUND_PATH)
 	if bg_texture:
-		background_rect = TextureRect.new()
-		background_rect.name = "BackgroundImage"
 		background_rect.texture = bg_texture
-		background_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		background_rect.stretch_mode = TextureRect.STRETCH_SCALE
-		background_rect.modulate = Color(1.0, 1.0, 1.0, 0.5)  # 50% d'opacité
-		background_rect.z_index = -20  # Encore plus derrière que les vaisseaux (-10)
-		background_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-		add_child(background_rect)
-		move_child(background_rect, 0)  # Déplace en premier enfant (fond)
+	else:
+		push_warning("Background non trouvé: " + BACKGROUND_PATH)
+		return
+	
+	# Configuration pour couvrir tout l'écran
+	background_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	background_rect.modulate = Color(1.0, 1.0, 1.0, 0.5)  # 50% d'opacité
+	background_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Taille = viewport entier
+	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var viewport_size := get_viewport().get_visible_rect().size
+	background_rect.size = viewport_size
+	
+	background_layer.add_child(background_rect)
 
 
 func _update_displays() -> void:
