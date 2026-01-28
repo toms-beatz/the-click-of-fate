@@ -86,6 +86,7 @@ var is_paused: bool = false
 var is_boss_wave: bool = false
 var current_boss: BaseEnemy = null
 var boss_visual: Control = null
+var wave_bonus_multiplier: float = 1.0  # BMAD Mode: Boost cumulatif par vague complétée
 
 ## Cinematic System
 var cinematic_layer: CanvasLayer
@@ -211,7 +212,13 @@ const PLANET_CINEMATICS := {
 ## Scaling par vague
 const WAVE_HP_SCALING := 1.15  # +15% HP par vague
 const WAVE_ATK_SCALING := 1.1  # +10% ATK par vague
-const ENEMIES_PER_WAVE := [2, 3, 3, 4, 5]  # Nombre d'ennemis par vague
+## Nombre d'ennemis par vague - par planète [Mercury, Venus, Mars, Earth]
+const ENEMIES_PER_WAVE := {
+	0: [6, 8, 8, 10, 10],      # Mercury (était [3,4,4,5,5])
+	1: [8, 10, 10, 12, 12],    # Venus (était [4,5,5,6,6])
+	2: [8, 10, 12, 12, 14],    # Mars (était [4,5,6,6,7])
+	3: [10, 12, 12, 14, 16],   # Earth (était [5,6,6,7,8])
+}
 
 ## Récompenses
 const ENEMY_KILL_REWARD := 8
@@ -226,6 +233,9 @@ func _ready() -> void:
 		# Marquer le début de la session pour pouvoir restore on retry
 		SaveManager.start_session()
 		coins_earned_this_run = 0
+	
+	# BMAD Mode: Réinitialiser le multiplicateur de vague pour chaque nouvelle planète
+	wave_bonus_multiplier = 1.0
 	
 	_setup_background()
 	_setup_combat_zone()
@@ -310,16 +320,16 @@ func _setup_combat_zone() -> void:
 	
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	
-	# Container pour le héros (côté gauche - 12% de la largeur)
+	# Container pour le héros (côté gauche - rapproché du centre - BMAD MODE)
 	hero_container = Control.new()
 	hero_container.name = "HeroContainer"
-	hero_container.position = Vector2(viewport_size.x * 0.12, viewport_size.y * 0.35)
+	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.40)  # BMAD: rapproché du centre
 	combat_zone.add_child(hero_container)
 	
-	# Container pour les ennemis (côté droit - 70% de la largeur)
+	# Container pour les ennemis (côté droit - rapproché du centre - BMAD MODE)
 	enemy_container = Control.new()
 	enemy_container.name = "EnemyContainer"
-	enemy_container.position = Vector2(viewport_size.x * 0.70, viewport_size.y * 0.31)
+	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.40)  # BMAD: rapproché du centre
 	combat_zone.add_child(enemy_container)
 	
 	# Sol/Platform visuel (couvre toute la largeur)
@@ -406,7 +416,7 @@ func _create_hero_visual() -> void:
 	
 	# Sprite principal du héros (taille relative au viewport)
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var sprite_width: int = mini(150, int(viewport_size.x * 0.20))  # Max 20% de la largeur
+	var sprite_width: int = mini(200, int(viewport_size.x * 0.28))  # Max 28% de la largeur - HÉROS PLUS GRAND
 	var sprite_height := sprite_width * 1.2  # Ratio 1.2 pour le héros
 	
 	hero_sprite = TextureRect.new()
@@ -1084,9 +1094,10 @@ func _spawn_wave() -> void:
 		wave_label.text = "WAVE %d / %d" % [current_wave, total_waves]
 		wave_label.add_theme_color_override("font_color", Color.WHITE)
 	
-	# Déterminer le nombre d'ennemis pour cette vague
-	var wave_idx := clampi(current_wave - 1, 0, ENEMIES_PER_WAVE.size() - 1)
-	enemies_in_wave = ENEMIES_PER_WAVE[wave_idx]
+	# Déterminer le nombre d'ennemis pour cette vague (selon la planète)
+	var wave_idx := clampi(current_wave - 1, 0, 4)  # Max 5 waves
+	var planet_enemies = ENEMIES_PER_WAVE.get(current_planet, ENEMIES_PER_WAVE[0])
+	enemies_in_wave = planet_enemies[wave_idx]
 	
 	for i in range(enemies_in_wave):
 		await get_tree().create_timer(0.4).timeout
@@ -1113,10 +1124,19 @@ func _spawn_enemy(index: int) -> void:
 	enemy_stats.crit_chance = 0.05 + (current_wave * 0.01)  # +1% crit par vague
 	enemy.base_stats = enemy_stats
 	
-	# Position relative à l'écran
+	# Position relative à l'écran - BMAD MODE: ennemis rapprochés comme une armée
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var enemy_spacing: float = viewport_size.x * 0.10  # 10% de la largeur entre chaque ennemi
-	enemy.position = Vector2(index * enemy_spacing, index * 35 - 35)
+	# Formation matricielle: 4 rangées, colonnes dynamiques
+	var enemy_spacing_x: float = viewport_size.x * 0.045  # 4.5% (était 10%) - armée compacte
+	var enemy_spacing_y: float = 35.0  # Vertical spacing entre rangées
+	var rows: int = 4
+	var cols: int = int((enemies_in_wave + rows - 1) / rows)
+	var row: int = int(index % rows)
+	var col: int = int(index / rows)
+	# Centrer la formation autour de (0, 0) du container
+	var offset_x: float = -(cols - 1) * enemy_spacing_x * 0.5
+	var offset_y: float = -60.0
+	enemy.position = Vector2(col * enemy_spacing_x + offset_x, row * enemy_spacing_y + offset_y)
 	enemy_container.add_child(enemy)
 	
 	# Créer le visuel de l'ennemi
@@ -1148,7 +1168,7 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 	
 	# Taille relative au viewport
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var body_width: int = mini(50, int(viewport_size.x * 0.07))
+	var body_width: int = mini(80, int(viewport_size.x * 0.11))  # ENNEMIS PLUS GRANDS
 	var body_height: int = int(body_width * 1.4)
 	var sprite_size := Vector2(body_width * 2, body_height * 2)
 	
@@ -1524,6 +1544,8 @@ func _on_wave_cleared() -> void:
 	
 	current_wave += 1
 	if current_wave <= total_waves:
+		# BMAD Mode: Appliquer le boost de vague AVANT la prochaine vague (mais pas au boss)
+		_apply_wave_bonus_to_hero()
 		await get_tree().create_timer(1.5).timeout
 		_show_floating_text("⚔️ WAVE %d ⚔️" % current_wave, center_pos + Vector2(0, 30), Color.WHITE, 36)
 		await get_tree().create_timer(0.8).timeout
@@ -1538,6 +1560,39 @@ func _on_wave_cleared() -> void:
 		await get_tree().create_timer(1.0).timeout
 		_spawn_boss()
 		state_machine.start_combat()
+
+
+func _apply_wave_bonus_to_hero() -> void:
+	# BMAD Mode: Boost de +10% ATK et +10% HP pour chaque vague complétée
+	wave_bonus_multiplier += 0.10  # Accumule: Wave1=1.10x, Wave2=1.20x, etc.
+	
+	var hero_visual: Control = hero_container.get_node_or_null("HeroVisual")
+	if not hero_visual:
+		push_error("[GameCombat] Hero visual not found for wave bonus!")
+		return
+	
+	# Appliquer le boost aux stats du héros
+	if hero:
+		hero.base_stats.attack = int(hero.base_stats.attack * 1.10)
+		hero.base_stats.max_hp = int(hero.base_stats.max_hp * 1.10)
+		# Remplir la HP au maximum pour équité
+		hero.base_stats.current_hp = hero.base_stats.max_hp
+	
+	# Affichage du boost avec une animation
+	var boost_text_pos := hero_container.position + Vector2(-50, -120)
+	_show_floating_text("⚡ POWER UP x%.2f ⚡" % wave_bonus_multiplier, boost_text_pos, Color(1.0, 0.85, 0.3), 24)
+	
+	# Animation de scintillement du héros
+	if hero_visual:
+		var tween := create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(hero_visual, "modulate", Color(1.5, 1.5, 1.5, 1.0), 0.2)
+		tween.tween_property(hero_visual, "scale", Vector2(1.15, 1.15), 0.2)
+		tween.chain()
+		tween.tween_property(hero_visual, "modulate", Color.WHITE, 0.2)
+		tween.tween_property(hero_visual, "scale", Vector2(1.0, 1.0), 0.2)
+	
+	print("[GameCombat] Wave bonus applied! Multiplier now: %.2f (ATK: %.2fx, HP: %.2fx)" % [wave_bonus_multiplier, wave_bonus_multiplier, wave_bonus_multiplier])
 
 
 func _on_hero_hp_changed(_current: int, _max_hp: int) -> void:
@@ -2164,8 +2219,9 @@ func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
 	
 	var visual := Control.new()
 	visual.name = "BossVisual"
-	var base_size: int = mini(180, int(viewport_size.x * 0.25))  # Max 25% de la largeur
-	var size_mult: float = 1.4 if is_final_boss else 1.0
+	# BMAD Mode: Boss prend 60% de l'espace (était 25%)
+	var base_size: int = mini(432, int(viewport_size.x * 0.60))  # 60% de la largeur!
+	var size_mult: float = 1.25 if is_final_boss else 1.0  # Dr. Mortis: 75% total (432 * 1.25 = 540px)
 	visual.custom_minimum_size = Vector2(base_size, base_size * 1.1) * size_mult
 	
 	# Container pour le boss (centré)
