@@ -167,36 +167,24 @@ var background_rect: TextureRect
 const BACKGROUND_PATH := "res://assets/sprites/background/background-menu-selection.png"
 
 func _create_background() -> void:
-	# Créer un CanvasLayer séparé pour le background (couche -1 = derrière tout)
-	background_layer = CanvasLayer.new()
-	background_layer.name = "BackgroundLayer"
-	background_layer.layer = -1  # Derrière tout le reste
-	add_child(background_layer)
-	
-	# Créer le TextureRect pour afficher le background
-	background_rect = TextureRect.new()
-	background_rect.name = "BackgroundImage"
-	
-	# Charger la texture
+	# Utilise le TextureRect existant dans la scène
+	var bg_node = get_node_or_null("BackgroundImage")
+	if not bg_node:
+		push_warning("BackgroundImage node not found in scene!")
+		return
 	var bg_texture = load(BACKGROUND_PATH)
 	if bg_texture:
-		background_rect.texture = bg_texture
+		bg_node.texture = bg_texture
 	else:
 		push_warning("Background non trouvé: " + BACKGROUND_PATH)
 		return
-	
-	# Configuration pour couvrir tout l'écran
-	background_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background_rect.stretch_mode = TextureRect.STRETCH_SCALE
-	background_rect.modulate = Color(1.0, 1.0, 1.0, 0.5)  # 50% d'opacité
-	background_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
-	# Taille = viewport entier
-	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg_node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg_node.stretch_mode = TextureRect.STRETCH_SCALE
+	bg_node.modulate = Color(0.3, 0.3, 0.3, 1)
+	bg_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg_node.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var viewport_size := get_viewport().get_visible_rect().size
-	background_rect.size = viewport_size
-	
-	background_layer.add_child(background_rect)
+	bg_node.size = viewport_size
 
 
 func _update_displays() -> void:
@@ -567,15 +555,11 @@ func _animate_entrance() -> void:
 # ==================== SPACESHIPS BACKGROUND ====================
 
 func _create_spaceships_background() -> void:
-	# Créer le container en arrière-plan (z_index négatif)
-	spaceships_container = Control.new()
-	spaceships_container.name = "SpaceshipsBackground"
-	spaceships_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	spaceships_container.z_index = -10  # Derrière le contenu, devant le background
-	spaceships_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(spaceships_container)
-	move_child(spaceships_container, 1)  # Après le background (index 0)
-	
+	# Utilise le node existant dans la scène
+	spaceships_container = get_node_or_null("SpaceshipsBackground")
+	if not spaceships_container:
+		push_warning("SpaceshipsBackground node not found in scene!")
+		return
 	# Spawner quelques vaisseaux initiaux
 	for i in range(4):
 		_spawn_spaceship(true)
