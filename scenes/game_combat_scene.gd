@@ -175,7 +175,7 @@ const PLANET_BOSSES := {
 	0: {"name": "Mercury Guardian", "hp": 400, "atk": 20, "speed": 1.0, "color": Color(1.0, 0.5, 0.2), "emoji": "🛡️", "special": "shield"},
 	1: {"name": "Venus Queen", "hp": 550, "atk": 25, "speed": 0.9, "color": Color(0.8, 0.9, 0.2), "emoji": "👑", "special": "poison"},
 	2: {"name": "Mars Warlord", "hp": 700, "atk": 30, "speed": 0.8, "color": Color(0.9, 0.4, 0.3), "emoji": "⚔️", "special": "rage"},
-	3: {"name": "DR. MORTIS", "hp": 1500, "atk": 40, "speed": 0.6, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},  # BOSS FINAL!
+	3: {"name": "DR. MORTIS", "hp": 1800, "atk": 45, "speed": 0.6, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},  # BOSS FINAL! BMAD Mode: HP 1500→1800 (+20%), ATK 40→45 (+12.5%)
 }
 
 ## Cinématique de fin (après avoir battu Dr. Mortis)
@@ -219,10 +219,10 @@ const WAVE_HP_SCALING := 1.15  # +15% HP par vague
 const WAVE_ATK_SCALING := 1.1  # +10% ATK par vague
 ## Nombre d'ennemis par vague - par planète [Mercury, Venus, Mars, Earth]
 const ENEMIES_PER_WAVE := {
-	0: [6, 8, 8, 10, 10],      # Mercury (était [3,4,4,5,5])
-	1: [8, 10, 10, 12, 12],    # Venus (était [4,5,5,6,6])
-	2: [8, 10, 12, 12, 14],    # Mars (était [4,5,6,6,7])
-	3: [10, 12, 12, 14, 16],   # Earth (était [5,6,6,7,8])
+	0: [6, 8, 8, 10, 8],       # Mercury (Wave 5: 10→8) - BMAD Mode: -25% Wave 5
+	1: [8, 10, 10, 12, 10],    # Venus (Wave 5: 12→10) - BMAD Mode: -25% Wave 5
+	2: [8, 10, 12, 12, 12],    # Mars (Wave 5: 14→12) - BMAD Mode: -25% Wave 5
+	3: [10, 12, 12, 14, 12],   # Earth (Wave 5: 16→12) - BMAD Mode: -25% Wave 5 (4 fewer mobs!)
 }
 
 ## Récompenses
@@ -269,11 +269,55 @@ func _setup_background() -> void:
 	background.layer = -10
 	add_child(background)
 	
+	# COF-808: Try to load fullscreen planet background image
+	var bg_image_path: String = _get_background_image_path(current_planet)
+	
+	if ResourceLoader.exists(bg_image_path):
+		# Load the background image
+		var bg_texture: Texture2D = load(bg_image_path)
+		
+		# Create TextureRect for fullscreen background
+		var bg_rect := TextureRect.new()
+		bg_rect.name = "BackgroundImage"
+		bg_rect.texture = bg_texture
+		bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED  # Fullscreen without gaps
+		bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		bg_rect.modulate.a = 0.95  # Slight transparency for UI readability
+		background.add_child(bg_rect)
+		
+		print("[GameCombat] Loaded background image: %s" % bg_image_path)
+	else:
+		# Fallback: Use colored gradient if image not found
+		print("[GameCombat] Background image not found at %s, using gradient fallback" % bg_image_path)
+		_setup_background_gradient_fallback()
+	
+	# Add dark overlay for UI readability (10% darkness)
+	var overlay := ColorRect.new()
+	overlay.name = "BackgroundOverlay"
+	overlay.color = Color(0, 0, 0, 0.1)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.add_child(overlay)
+
+
+func _get_background_image_path(planet_id: int) -> String:
+	# COF-808: Map planet IDs to background image paths
+	var bg_paths := {
+		0: "res://assets/backgrounds/mercury_bg.png",
+		1: "res://assets/backgrounds/venus_bg.png",
+		2: "res://assets/backgrounds/mars_bg.png",
+		3: "res://assets/backgrounds/earth_bg.png"
+	}
+	return bg_paths.get(planet_id, bg_paths[0])
+
+
+func _setup_background_gradient_fallback() -> void:
+	# COF-808: Fallback to colored gradient if images not found (COF-807 colors)
 	var planet_colors: Dictionary = PLANET_COLORS.get(current_planet, PLANET_COLORS[0])
 	
-	# Gradient background
+	# Base color background
 	var bg_rect := ColorRect.new()
-	bg_rect.name = "BackgroundGradient"
+	bg_rect.name = "BackgroundGradientFallback"
 	bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg_rect.color = planet_colors.bg_bottom
 	background.add_child(bg_rect)
