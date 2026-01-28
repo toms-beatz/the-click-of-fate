@@ -253,7 +253,6 @@ func _create_planet_carousel() -> void:
 func _create_planet_node(index: int, highest_completed: int) -> Control:
 	var info: Dictionary = PLANETS_INFO[index]
 	var is_unlocked: bool = index <= highest_completed + 1
-	var is_completed: bool = index <= highest_completed
 	
 	# Container principal
 	var container := Control.new()
@@ -304,31 +303,23 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		
 		container.add_child(planet_visual)
 	
-	# Badge de complétion (checkmark vert)
-	if is_completed:
-		var check_label := Label.new()
-		check_label.name = "Check"
-		check_label.text = "✓"
-		var check_size: int = int(planet_size_center * 0.15)
-		check_label.add_theme_font_size_override("font_size", check_size)
-		check_label.add_theme_color_override("font_color", Color.GREEN)
-		check_label.position = Vector2(planet_size_center - check_size - 10, 5)
-		container.add_child(check_label)
+	# Plus de tick de complétion
 	
-	# Cadenas si verrouillé
+	# Cadenas + planète assombrie si verrouillée
 	if not is_unlocked:
+		# Ajoute un cadenas centré
 		var lock_container := Control.new()
 		lock_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 		container.add_child(lock_container)
-		
 		var lock_label := Label.new()
 		lock_label.name = "Lock"
 		lock_label.text = "🔒"
-		lock_label.add_theme_font_size_override("font_size", 52)
+		lock_label.add_theme_font_size_override("font_size", int(planet_size_center * 0.35))
 		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lock_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 		lock_container.add_child(lock_label)
+		# Assombrit la planète (sprite ou colorrect déjà grisé plus haut)
 	
 	# Stocker les métadonnées
 	container.set_meta("planet_index", index)
