@@ -67,6 +67,11 @@ var punishment_timer_label: Label
 var active_enemies: Array = []
 var enemy_visuals: Dictionary = {}
 
+## COF-907: Vaisseaux ennemis actifs
+var active_ships: Array = []
+var ship_visuals: Dictionary = {}
+var ship_container: Control
+
 ## État du jeu
 var current_wave: int = 1
 var total_waves: int = 5
@@ -131,6 +136,19 @@ const MINIBOSS_SPRITES := {
 	"fireball": "res://assets/sprites/enemies/mini-boss-fireball.png",
 	"other_side": "res://assets/sprites/enemies/mini-boss-other-side.png"
 }
+
+## COF-907: Vaisseaux ennemis - sprites aériens
+const ENEMY_SHIPS := [
+	"res://assets/sprites/enemies/vaisseau-1.png",
+	"res://assets/sprites/enemies/vaisseau-2.png",
+	"res://assets/sprites/enemies/vaisseau-3.png",
+	"res://assets/sprites/enemies/vaisseau-4.png",
+	"res://assets/sprites/enemies/vaisseau-5.png",
+	"res://assets/sprites/enemies/vaisseau-6.png"
+]
+
+## COF-907: Configuration vaisseaux par wave (Array indexé par wave-1)
+const SHIPS_PER_WAVE := [1, 1, 2, 2, 3]  # Wave 1-5: nombre de vaisseaux
 
 ## ========== BALANCE CONFIG ==========
 ## Héros
@@ -345,17 +363,24 @@ func _setup_combat_zone() -> void:
 	
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	
-	# Container pour le héros (côté gauche - rapproché du centre - BMAD MODE)
+	# Container pour le héros (côté gauche - BMAD MODE)
 	hero_container = Control.new()
 	hero_container.name = "HeroContainer"
-	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.55)  # BMAD: Descend au niveau bande noire (était 0.40)
+	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.55)  # Position originale
 	combat_zone.add_child(hero_container)
 	
-	# Container pour les ennemis (côté droit - rapproché du centre - BMAD MODE)
+	# Container pour les ennemis (côté droit - BMAD MODE)
 	enemy_container = Control.new()
 	enemy_container.name = "EnemyContainer"
-	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.55)  # BMAD: Descend au niveau bande noire (était 0.40)
+	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.55)  # Position originale
 	combat_zone.add_child(enemy_container)
+	
+	# COF-907: Container pour les vaisseaux ennemis (au-dessus des troupes)
+	ship_container = Control.new()
+	ship_container.name = "ShipContainer"
+	ship_container.position = Vector2(viewport_size.x * 0.60, viewport_size.y * 0.25)  # Haut à droite
+	ship_container.z_index = 5  # Au-dessus du background, sous le HUD
+	combat_zone.add_child(ship_container)
 	
 	# Ligne de séparation combat (au centre)
 	var battle_line := ColorRect.new()
@@ -431,9 +456,9 @@ func _create_hero_visual() -> void:
 	visual.name = "HeroVisual"
 	hero.add_child(visual)
 	
-	# Sprite principal du héros (taille relative au viewport)
+	# COF-907: Sprite principal du héros agrandi (taille relative au viewport)
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var sprite_width: int = mini(200, int(viewport_size.x * 0.28))  # Max 28% de la largeur - HÉROS PLUS GRAND
+	var sprite_width: int = mini(350, int(viewport_size.x * 0.48))  # COF-907: Max 48% de la largeur - HÉROS XXL
 	var sprite_height := sprite_width * 1.2  # Ratio 1.2 pour le héros
 	
 	hero_sprite = TextureRect.new()
@@ -698,8 +723,8 @@ func _create_bottom_hud(parent: Control) -> void:
 	var bottom_container := VBoxContainer.new()
 	bottom_container.name = "BottomContainer"
 	bottom_container.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom_container.anchor_top = 0.78  # Commence à 78% de l'écran (adapté à la hauteur)
-	bottom_container.add_theme_constant_override("separation", 10)
+	bottom_container.anchor_top = 0.80  # 22% de l'écran pour les boutons (remis comme avant)
+	bottom_container.add_theme_constant_override("separation", 8)
 	parent.add_child(bottom_container)
 	
 	# Barre de skills
@@ -713,14 +738,14 @@ func _create_bottom_hud(parent: Control) -> void:
 	
 	# Bouton Click Zone tripartite
 	var click_margin := MarginContainer.new()
-	click_margin.add_theme_constant_override("margin_left", 15)
-	click_margin.add_theme_constant_override("margin_right", 15)
-	click_margin.add_theme_constant_override("margin_bottom", 20)
+	click_margin.add_theme_constant_override("margin_left", 10)
+	click_margin.add_theme_constant_override("margin_right", 10)
+	click_margin.add_theme_constant_override("margin_bottom", 15)
 	bottom_container.add_child(click_margin)
 	
 	click_zone_button = ClickZoneButton.new()
 	click_zone_button.name = "ClickZoneButton"
-	click_zone_button.custom_minimum_size = Vector2(0, 110)  # Hauteur minimale, largeur flexible
+	click_zone_button.custom_minimum_size = Vector2(0, 180)  # COF-907: Hauteur agrandie (110 → 180)
 	click_zone_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	click_zone_button.heal_color = Color(0.15, 0.5, 0.8, 0.9)
 	click_zone_button.dodge_color = Color(0.6, 0.35, 0.9, 0.9)  # Violet pour Dodge
@@ -749,36 +774,56 @@ func _create_skill_bar() -> HBoxContainer:
 	skill_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	skill_bar.add_theme_constant_override("separation", 15)
 	
+	# Skills débloqués par planète:
+	# - Mercury (0): HEAL
+	# - Venus (1): CRIT  
+	# - Mars (2): SHIELD
+	# - Earth (3): NOVA
+	var highest_planet: int = 0
+	if SaveManager:
+		highest_planet = SaveManager.get_highest_planet_completed() + 1  # +1 car on débloque la planète actuelle
+	highest_planet = maxi(highest_planet, current_planet)  # Au moins la planète en cours
+	
 	var skills := [
-		{"id": "heal_burst", "name": "HEAL", "color": Color(0.2, 0.8, 0.5), "icon": "💚", "cooldown": 12.0, "desc": "Full Heal"},
-		{"id": "crit_surge", "name": "CRIT", "color": Color(0.9, 0.5, 0.1), "icon": "💥", "cooldown": 15.0, "desc": "+50% Crit"},
-		{"id": "dodge_field", "name": "SHIELD", "color": Color(0.5, 0.4, 0.9), "icon": "🛡️", "cooldown": 10.0, "desc": "Invincible"},
-		{"id": "nova_blast", "name": "NOVA", "color": Color(0.9, 0.2, 0.3), "icon": "☄️", "cooldown": 20.0, "desc": "AOE Dmg"},
+		{"id": "heal_burst", "name": "HEAL", "color": Color(0.2, 0.8, 0.5), "icon": "💚", "cooldown": 12.0, "desc": "Full Heal", "unlock_planet": 0},
+		{"id": "crit_surge", "name": "CRIT", "color": Color(0.9, 0.5, 0.1), "icon": "💥", "cooldown": 15.0, "desc": "+50% Crit", "unlock_planet": 1},
+		{"id": "dodge_field", "name": "SHIELD", "color": Color(0.5, 0.4, 0.9), "icon": "🛡️", "cooldown": 10.0, "desc": "Invincible", "unlock_planet": 2},
+		{"id": "nova_blast", "name": "NOVA", "color": Color(0.9, 0.2, 0.3), "icon": "☄️", "cooldown": 20.0, "desc": "AOE Dmg", "unlock_planet": 3},
 	]
 	
 	for skill in skills:
-		var skill_btn := _create_skill_button(skill)
+		var is_unlocked: bool = highest_planet >= skill.unlock_planet
+		var skill_btn := _create_skill_button(skill, is_unlocked)
 		skill_bar.add_child(skill_btn)
 		skill_buttons[skill.id] = skill_btn
 	
 	return skill_bar
 
 
-func _create_skill_button(skill_data: Dictionary) -> Button:
+func _create_skill_button(skill_data: Dictionary, is_unlocked: bool = true) -> Button:
 	var btn := Button.new()
 	btn.name = skill_data.id
-	btn.custom_minimum_size = Vector2(65, 70)  # Plus compact
+	btn.custom_minimum_size = Vector2(85, 100)  # COF-907: Boutons agrandis (65x70 → 85x100)
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btn.text = skill_data.icon + "\n" + skill_data.name
+	
+	# Si verrouillé, afficher un cadenas
+	if is_unlocked:
+		btn.text = skill_data.icon + "\n" + skill_data.name
+	else:
+		btn.text = "🔒\n" + skill_data.name
+		btn.disabled = true
 	
 	# --- PIXEL ART STYLE ---
 	var style := StyleBoxFlat.new()
-	style.bg_color = skill_data.color.lightened(0.1)
+	if is_unlocked:
+		style.bg_color = skill_data.color.lightened(0.1)
+	else:
+		style.bg_color = Color(0.15, 0.15, 0.15, 0.8)  # Gris foncé pour verrouillé
 	style.border_width_left = 2
 	style.border_width_top = 2
 	style.border_width_right = 2
 	style.border_width_bottom = 2
-	style.border_color = Color(1,1,1) # Blanc net
+	style.border_color = Color(1,1,1) if is_unlocked else Color(0.4, 0.4, 0.4)
 	style.corner_radius_top_left = 0
 	style.corner_radius_top_right = 0
 	style.corner_radius_bottom_left = 0
@@ -786,11 +831,11 @@ func _create_skill_button(skill_data: Dictionary) -> Button:
 	btn.add_theme_stylebox_override("normal", style)
 
 	var hover_style := style.duplicate()
-	hover_style.bg_color = skill_data.color
+	hover_style.bg_color = skill_data.color if is_unlocked else Color(0.2, 0.2, 0.2, 0.8)
 	btn.add_theme_stylebox_override("hover", hover_style)
 
 	var pressed_style := style.duplicate()
-	pressed_style.bg_color = skill_data.color.darkened(0.2)
+	pressed_style.bg_color = skill_data.color.darkened(0.2) if is_unlocked else Color(0.1, 0.1, 0.1, 0.8)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
 
 	var disabled_style := style.duplicate()
@@ -807,14 +852,16 @@ func _create_skill_button(skill_data: Dictionary) -> Button:
 	else:
 		btn.add_theme_font_size_override("font_size", 16)
 
-	btn.add_theme_color_override("font_color", Color(1,1,1))
+	btn.add_theme_color_override("font_color", Color(1,1,1) if is_unlocked else Color(0.5, 0.5, 0.5))
 	
-	# Connecter le bouton
-	btn.pressed.connect(_on_skill_pressed.bind(skill_data))
+	# Connecter le bouton seulement si débloqué
+	if is_unlocked:
+		btn.pressed.connect(_on_skill_pressed.bind(skill_data))
 	
 	# Stocker les données du skill dans metadata
 	btn.set_meta("skill_data", skill_data)
 	btn.set_meta("cooldown_label", null)
+	btn.set_meta("is_unlocked", is_unlocked)
 	
 	return btn
 
@@ -1119,6 +1166,11 @@ func _spawn_wave() -> void:
 	for i in range(enemies_in_wave):
 		await get_tree().create_timer(0.4).timeout
 		_spawn_enemy(i)
+	
+	# COF-907: Spawn vaisseaux ennemis aériens
+	var ship_idx: int = clampi(current_wave - 1, 0, SHIPS_PER_WAVE.size() - 1)
+	var ships_count: int = SHIPS_PER_WAVE[ship_idx]
+	_spawn_enemy_ships(ships_count)
 
 
 func _spawn_enemy(index: int) -> void:
@@ -1183,11 +1235,11 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 	var planet_data: Dictionary = PLANET_COLORS.get(current_planet, PLANET_COLORS[0])
 	var accent: Color = planet_data.accent
 	
-	# Taille relative au viewport
+	# COF-907: Taille relative au viewport - Ennemis agrandis
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var body_width: int = mini(80, int(viewport_size.x * 0.11))  # ENNEMIS PLUS GRANDS
+	var body_width: int = mini(100, int(viewport_size.x * 0.14))  # COF-907: ENNEMIS XXL (0.11 → 0.14)
 	var body_height: int = int(body_width * 1.4)
-	var sprite_size := Vector2(body_width * 2, body_height * 2)
+	var sprite_size := Vector2(body_width * 2.2, body_height * 2.2)  # COF-907: +10% scaling sprite
 	
 	# Vérifier si on a un sprite pour cette planète
 	var enemy_sprite_data: Dictionary = ENEMY_SPRITES.get(current_planet, {})
@@ -1250,6 +1302,156 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 	visual.add_child(hp_fill)
 	
 	return visual
+
+
+# ==================== COF-907: ENEMY SHIPS SYSTEM ====================
+
+func _spawn_enemy_ships(count: int) -> void:
+	# Nettoyer les vaisseaux précédents
+	for ship in active_ships:
+		if is_instance_valid(ship):
+			ship.queue_free()
+	active_ships.clear()
+	ship_visuals.clear()
+	
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var ship_spacing: float = viewport_size.x * 0.10
+	var start_x: float = -ship_spacing * (count - 1) / 2.0
+	
+	for i in range(count):
+		var ship := BaseEnemy.new()
+		ship.name = "EnemyShip_%d" % i
+		
+		# Stats du vaisseau (ennemi aérien)
+		var ship_stats := EntityStats.new()
+		ship_stats.display_name = "Fighter Ship"
+		ship_stats.max_hp = 30 + (current_wave * 10)
+		ship_stats.attack = 5 + (current_wave * 2)
+		ship_stats.attack_speed = 0.8
+		ship.base_stats = ship_stats
+		
+		# Position en formation diagonale
+		var ship_pos := Vector2(start_x + i * ship_spacing, i * 30)
+		ship.position = ship_pos
+		
+		ship_container.add_child(ship)
+		active_ships.append(ship)
+		
+		# Visual du vaisseau
+		var visual := _create_ship_visual(ship)
+		ship_visuals[ship] = visual
+		
+		# Connecter signaux
+		ship.died.connect(_on_ship_died.bind(ship))
+		ship.hp_changed.connect(_on_ship_hp_changed.bind(ship))
+		
+		# Ajouter au combat manager comme cible
+		combat_manager.add_enemy(ship)
+
+
+func _create_ship_visual(ship: BaseEnemy) -> Control:
+	var visual := Control.new()
+	visual.name = "ShipVisual"
+	ship.add_child(visual)
+	
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var ship_size := Vector2(
+		mini(100, int(viewport_size.x * 0.14)),
+		mini(70, int(viewport_size.x * 0.10))
+	)
+	
+	# Sprite du vaisseau (choix aléatoire)
+	var sprite := TextureRect.new()
+	sprite.name = "ShipSprite"
+	var random_ship: String = ENEMY_SHIPS[randi() % ENEMY_SHIPS.size()]
+	if ResourceLoader.exists(random_ship):
+		sprite.texture = load(random_ship)
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.custom_minimum_size = ship_size
+	sprite.size = ship_size
+	sprite.position = Vector2(-ship_size.x / 2, -ship_size.y)
+	# Flip horizontal pour pointer vers le héros
+	sprite.flip_h = true
+	visual.add_child(sprite)
+	
+	# Barre de vie du vaisseau
+	var hp_bar_width := ship_size.x * 0.8
+	var hp_bg := ColorRect.new()
+	hp_bg.name = "HPBackground"
+	hp_bg.color = Color(0.1, 0.1, 0.1, 0.8)
+	hp_bg.size = Vector2(hp_bar_width, 5)
+	hp_bg.position = Vector2(-hp_bar_width / 2, -ship_size.y - 10)
+	visual.add_child(hp_bg)
+	
+	var hp_fill := ColorRect.new()
+	hp_fill.name = "HPFill"
+	hp_fill.color = Color(0.5, 0.2, 0.8)  # Violet pour différencier
+	hp_fill.size = Vector2(hp_bar_width - 2, 3)
+	hp_fill.position = Vector2(-hp_bar_width / 2 + 1, -ship_size.y - 9)
+	visual.add_child(hp_fill)
+	
+	# Animation d'apparition
+	visual.modulate.a = 0.0
+	var appear_tween := create_tween()
+	appear_tween.tween_property(visual, "modulate:a", 1.0, 0.4)
+	
+	# Animation de flottement
+	_animate_ship_hover(sprite)
+	
+	return visual
+
+
+func _animate_ship_hover(sprite: TextureRect) -> void:
+	var original_y := sprite.position.y
+	var tween := create_tween().set_loops()
+	tween.tween_property(sprite, "position:y", original_y - 8, 1.0).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "position:y", original_y + 8, 1.0).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+
+func _on_ship_died(ship: BaseEnemy) -> void:
+	var ship_pos := ship.global_position
+	
+	# Animation de destruction du vaisseau (comme les troupes au sol)
+	var visual: Control = ship.get_node_or_null("ShipVisual")
+	if visual:
+		# Arrêter l'animation de flottement
+		var sprite: TextureRect = visual.get_node_or_null("ShipSprite")
+		
+		# Animation de mort : explosion + rotation + disparition
+		var tween := create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(visual, "modulate", Color(1.5, 0.8, 0.3, 1.0), 0.15)  # Flash orange
+		tween.chain().set_parallel(true)
+		tween.tween_property(visual, "modulate:a", 0.0, 0.4)
+		tween.tween_property(visual, "scale", Vector2(1.5, 0.2), 0.35)  # Écrasement
+		tween.tween_property(visual, "rotation", randf_range(-0.5, 0.5), 0.35)  # Rotation
+		tween.tween_property(visual, "position:y", visual.position.y + 30, 0.35)  # Tombe
+		tween.chain().tween_callback(ship.queue_free)
+	
+	_show_floating_text("💥", ship_pos + Vector2(0, -50), Color.ORANGE, 28)
+	
+	# COF-907: Reward pour vaisseau (15 SC)
+	var ship_reward: int = 15
+	coins_earned_this_run += ship_reward
+	SaveManager.add_currency(ship_reward)
+	_show_floating_text("+%d SC" % ship_reward, ship_pos + Vector2(20, -30), Color(1.0, 0.9, 0.3), 18)
+	_update_currency_display()
+	
+	if ship in active_ships:
+		active_ships.erase(ship)
+	if ship in ship_visuals:
+		ship_visuals.erase(ship)
+
+
+func _on_ship_hp_changed(current_hp: int, max_hp: int, ship: BaseEnemy) -> void:
+	if ship in ship_visuals:
+		var visual: Control = ship_visuals[ship]
+		var hp_fill: ColorRect = visual.get_node_or_null("HPFill")
+		var hp_bg: ColorRect = visual.get_node_or_null("HPBackground")
+		if hp_fill and hp_bg:
+			var ratio := float(current_hp) / float(max_hp)
+			hp_fill.size.x = (hp_bg.size.x - 2) * ratio
 
 
 # ==================== VISUAL EFFECTS ====================
@@ -1544,20 +1746,105 @@ func _on_wave_cleared() -> void:
 	if current_wave <= total_waves:
 		# BMAD Mode: Appliquer le boost de vague AVANT la prochaine vague (mais pas au boss)
 		_apply_wave_bonus_to_hero()
-		await get_tree().create_timer(1.5).timeout
-		_show_floating_text("⚔️ WAVE %d ⚔️" % current_wave, center_pos + Vector2(0, 30), Color.WHITE, 36)
-		await get_tree().create_timer(0.8).timeout
+		await get_tree().create_timer(1.0).timeout
+		# Afficher le titre de vague pendant 3 secondes
+		await _show_wave_title("⚔️ WAVE %d ⚔️" % current_wave, Color.WHITE)
 		_spawn_wave()
 		# Redémarrer le combat pour la nouvelle vague
 		state_machine.start_combat()
 	else:
 		# Toutes les vagues terminées - BOSS TIME!
 		print("[GameCombat] All waves cleared! Spawning boss...")
-		await get_tree().create_timer(1.5).timeout
-		_show_floating_text("⚠️ BOSS INCOMING! ⚠️", center_pos, Color(1.0, 0.3, 0.3), 36)
 		await get_tree().create_timer(1.0).timeout
+		# Afficher le titre du boss pendant 3 secondes
+		var boss_data: Dictionary = PLANET_BOSSES.get(current_planet, PLANET_BOSSES[0])
+		await _show_wave_title("⚠️ %s ⚠️" % boss_data.name.to_upper(), Color(1.0, 0.3, 0.3), true)
 		_spawn_boss()
 		state_machine.start_combat()
+
+
+## Affiche un titre de vague/boss centré en haut pendant 3 secondes
+func _show_wave_title(text: String, color: Color, is_boss: bool = false) -> void:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	
+	# Créer un panneau de fond
+	var panel := PanelContainer.new()
+	panel.name = "WaveTitle"
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.0, 0.0, 0.0, 0.85)
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.border_color = color
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.content_margin_left = 40
+	style.content_margin_right = 40
+	style.content_margin_top = 20
+	style.content_margin_bottom = 20
+	panel.add_theme_stylebox_override("panel", style)
+	
+	# Label du titre
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var font_size: int = 48 if is_boss else 42
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	panel.add_child(label)
+	
+	# Sous-titre pour le boss
+	if is_boss:
+		var vbox := VBoxContainer.new()
+		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		label.reparent(vbox)
+		
+		var sub_label := Label.new()
+		sub_label.text = "PREPARE FOR BATTLE!"
+		sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub_label.add_theme_font_size_override("font_size", 24)
+		sub_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
+		vbox.add_child(sub_label)
+		
+		panel.add_child(vbox)
+	
+	# Positionner au centre-haut
+	panel.position = Vector2(viewport_size.x * 0.5, viewport_size.y * 0.15)
+	panel.pivot_offset = panel.size * 0.5
+	effects_layer.add_child(panel)
+	
+	# Attendre que le panel soit dimensionné puis centrer
+	await get_tree().process_frame
+	panel.position = Vector2((viewport_size.x - panel.size.x) * 0.5, viewport_size.y * 0.12)
+	
+	# Animation d'apparition
+	panel.modulate.a = 0.0
+	panel.scale = Vector2(0.5, 0.5)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(panel, "modulate:a", 1.0, 0.3).set_ease(Tween.EASE_OUT)
+	tween.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	
+	# Pulsation pendant l'affichage
+	await tween.finished
+	var pulse_tween := create_tween().set_loops(3)
+	pulse_tween.tween_property(panel, "scale", Vector2(1.05, 1.05), 0.5).set_ease(Tween.EASE_IN_OUT)
+	pulse_tween.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.5).set_ease(Tween.EASE_IN_OUT)
+	
+	# Attendre selon le type - 1.5s pour les vagues, 3s pour les boss
+	var display_time: float = 3.0 if is_boss else 1.5
+	await get_tree().create_timer(display_time).timeout
+	
+	# Animation de disparition
+	pulse_tween.kill()
+	var fade_tween := create_tween()
+	fade_tween.set_parallel(true)
+	fade_tween.tween_property(panel, "modulate:a", 0.0, 0.4)
+	fade_tween.tween_property(panel, "scale", Vector2(1.2, 0.8), 0.4)
+	fade_tween.tween_property(panel, "position:y", panel.position.y - 30, 0.4)
+	await fade_tween.finished
+	panel.queue_free()
 
 
 func _apply_wave_bonus_to_hero() -> void:
@@ -2153,8 +2440,9 @@ func _end_cinematic() -> void:
 		cinematic_layer.queue_free()
 		cinematic_layer = null
 	
-	# Démarrer le combat
+	# Démarrer le combat avec titre de vague 1
 	await get_tree().create_timer(0.5).timeout
+	await _show_wave_title("⚔️ WAVE 1 ⚔️", Color.WHITE)
 	_spawn_wave()
 	state_machine.start_combat()
 

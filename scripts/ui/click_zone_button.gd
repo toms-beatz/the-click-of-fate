@@ -1,23 +1,20 @@
 ## ClickZoneButton - Bouton tripartite principal pour les actions du joueur
 ##
-## Divisé en 3 zones: Heal (gauche) | Boost (centre) | Attack (droite)
-## Détecte la position X du touch/clic pour déterminer l'action.
-## Gère le feedback visuel immédiat.
+## Divisé en 3 zones: Heal (gauche) | Dodge (centre) | Attack (droite)
+## Design Sci-Fi Premium avec effets néon et animations tactiles
 ##
 ## Layout:
 ## ┌─────────────┬─────────────┬─────────────┐
-## │    HEAL     │    BOOST    │   ATTACK    │
-## │   (0-33%)   │  (33-66%)   │  (66-100%)  │
+## │    HEAL     │    DODGE    │   ATTACK    │
+## │   (vert)    │   (bleu)    │   (rouge)   │
 ## └─────────────┴─────────────┴─────────────┘
 class_name ClickZoneButton
 extends Control
 
 ## Émis quand une zone est pressée
-## [param zone] "heal", "boost", ou "attack"
 signal zone_pressed(zone: StringName)
 
 ## Émis quand une zone est relâchée
-## [param zone] "heal", "boost", ou "attack"
 signal zone_released(zone: StringName)
 
 
@@ -31,28 +28,73 @@ const ZONE_NAMES: Dictionary = {
 	Zone.ATTACK: &"attack"
 }
 
-## Couleurs de base par zone
-@export var heal_color: Color = Color(0.2, 0.6, 0.9, 0.8)  # Bleu
-@export var dodge_color: Color = Color(0.6, 0.4, 0.9, 0.8)  # Violet
-@export var attack_color: Color = Color(0.9, 0.3, 0.2, 0.8)  # Rouge
+# =============================================================================
+# COULEURS SCI-FI PREMIUM
+# =============================================================================
+
+## Couleurs principales par zone (vives, contrastées)
+const COLOR_HEAL := Color("#00FF00")       # Vert glowing
+const COLOR_HEAL_DARK := Color("#10B981")  # Vert émeraude
+const COLOR_DODGE := Color("#0066FF")      # Bleu dynamique
+const COLOR_DODGE_DARK := Color("#3B82F6") # Bleu clair
+const COLOR_ATTACK := Color("#FF3333")     # Rouge flamboyant
+const COLOR_ATTACK_DARK := Color("#EF4444")# Rouge clair
+
+## Couleurs d'état
+const COLOR_DISABLED := Color(0.25, 0.25, 0.25, 0.8)
+const COLOR_BORDER_GLOW := Color(1, 1, 1, 0.9)
+const COLOR_SHADOW := Color(0, 0, 0, 0.5)
+
+## Icônes par zone (plus grandes et visibles)
+const ICON_HEAL := "❤️"
+const ICON_DODGE := "🛡️"
+const ICON_ATTACK := "⚔️"
+
+# =============================================================================
+# DIMENSIONS - OPTIMISÉES POUR TACTILE MOBILE
+# =============================================================================
+
+const BUTTON_CORNER_RADIUS := 16
+const BUTTON_BORDER_WIDTH := 4
+const BUTTON_SPACING := 16
+const FONT_SIZE_LABEL := 24
+const FONT_SIZE_ICON := 36
+const SHADOW_SIZE := 6
+const SHADOW_OFFSET := Vector2(0, 4)
+const MIN_BUTTON_HEIGHT := 90  # Hauteur minimum pour zone tactile
+
+# =============================================================================
+# VARIABLES
+# =============================================================================
+
+## Couleurs de base par zone (exportées pour override)
+@export var heal_color: Color = COLOR_HEAL
+@export var dodge_color: Color = COLOR_DODGE
+@export var attack_color: Color = COLOR_ATTACK
 
 ## Couleur de highlight quand pressé
-@export var highlight_intensity: float = 0.3
+@export var highlight_intensity: float = 0.25
 
 ## Durée du feedback visuel (secondes)
-@export var feedback_duration: float = 0.15
+@export var feedback_duration: float = 0.1
 
-## Est-ce que le bouton est actif? (false pendant punishment)
+## Est-ce que le bouton est actif?
 var is_active: bool = true
 
 ## Zone actuellement pressée (null si aucune)
 var _current_zone: Variant = null
 
-## ColorRects pour chaque zone (créés dynamiquement)
+## PanelContainers pour chaque zone
 var _zone_rects: Dictionary = {}
 
 ## Labels pour chaque zone
 var _zone_labels: Dictionary = {}
+
+## Labels d'icônes pour chaque zone
+var _zone_icons: Dictionary = {}
+
+## Barres de cooldown pour chaque zone
+var _zone_cooldown_bars: Dictionary = {}
 
 ## Labels des noms originaux
 var _zone_original_names: Dictionary = {
@@ -71,71 +113,152 @@ var _zone_blocked: Dictionary = {
 ## Tweens actifs pour le feedback
 var _feedback_tweens: Dictionary = {}
 
+## Styleboxes originaux pour restauration
+var _zone_styles: Dictionary = {}
+
+
+# =============================================================================
+# LIFECYCLE
+# =============================================================================
 
 func _ready() -> void:
 	_setup_visuals()
-	
-	# S'assurer que le Control reçoit les inputs
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	
-	# Attendre un frame pour que la taille soit définie
 	await get_tree().process_frame
 	if size.x <= 0:
 		push_warning("ClickZoneButton: size.x is 0, inputs won't work correctly")
 
 
+# =============================================================================
+# SETUP VISUEL
+# =============================================================================
+
 func _setup_visuals() -> void:
-	# Créer un HBoxContainer pour les 3 zones
 	var container := HBoxContainer.new()
 	container.name = "ZoneContainer"
 	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	container.add_theme_constant_override("separation", 4)
+	container.add_theme_constant_override("separation", BUTTON_SPACING)
 	add_child(container)
 	
-	# Créer les 3 zones
-	_create_zone(container, Zone.HEAL, "HEAL", heal_color)
-	_create_zone(container, Zone.DODGE, "DODGE", dodge_color)
-	_create_zone(container, Zone.ATTACK, "ATTACK", attack_color)
+	_create_zone(container, Zone.HEAL, "HEAL", ICON_HEAL, heal_color, COLOR_HEAL_DARK)
+	_create_zone(container, Zone.DODGE, "DODGE", ICON_DODGE, dodge_color, COLOR_DODGE_DARK)
+	_create_zone(container, Zone.ATTACK, "ATTACK", ICON_ATTACK, attack_color, COLOR_ATTACK_DARK)
 
 
-func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, color: Color) -> void:
-	# Container pour la zone
+func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: String, color: Color, color_dark: Color) -> void:
 	var zone_container := PanelContainer.new()
 	zone_container.name = ZONE_NAMES[zone]
 	zone_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	zone_container.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Le parent gère les inputs
+	zone_container.custom_minimum_size.y = MIN_BUTTON_HEIGHT
+	zone_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(zone_container)
 	
-	# Créer un StyleBoxFlat pour le background
+	# Style Sci-Fi avec dégradé glossy et bordure néon épaisse
 	var stylebox := StyleBoxFlat.new()
-	stylebox.bg_color = color
-	stylebox.corner_radius_top_left = 8
-	stylebox.corner_radius_top_right = 8
-	stylebox.corner_radius_bottom_left = 8
-	stylebox.corner_radius_bottom_right = 8
+	stylebox.bg_color = color.darkened(0.4)
+	
+	# Bordure néon épaisse avec glow
+	stylebox.border_color = color.lightened(0.3)
+	stylebox.border_width_top = BUTTON_BORDER_WIDTH
+	stylebox.border_width_bottom = BUTTON_BORDER_WIDTH + 1  # Plus épais en bas pour effet 3D
+	stylebox.border_width_left = BUTTON_BORDER_WIDTH
+	stylebox.border_width_right = BUTTON_BORDER_WIDTH
+	
+	# Coins arrondis friendly tactile
+	stylebox.corner_radius_top_left = BUTTON_CORNER_RADIUS
+	stylebox.corner_radius_top_right = BUTTON_CORNER_RADIUS
+	stylebox.corner_radius_bottom_left = BUTTON_CORNER_RADIUS
+	stylebox.corner_radius_bottom_right = BUTTON_CORNER_RADIUS
+	
+	# Ombre portée pour effet 3D pressable
+	stylebox.shadow_color = COLOR_SHADOW
+	stylebox.shadow_size = SHADOW_SIZE
+	stylebox.shadow_offset = SHADOW_OFFSET
+	
+	# Anti-aliasing pour bordures plus nettes
+	stylebox.anti_aliasing = true
+	stylebox.anti_aliasing_size = 1.5
+	
 	zone_container.add_theme_stylebox_override("panel", stylebox)
-	
 	_zone_rects[zone] = zone_container
+	_zone_styles[zone] = stylebox.duplicate()
 	
-	# Label centré
+	# VBox pour contenu (icône + texte + cooldown)
+	var vbox := VBoxContainer.new()
+	vbox.name = "Content"
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	zone_container.add_child(vbox)
+	
+	# Icône géante avec glow
+	var icon_label := Label.new()
+	icon_label.name = "Icon"
+	icon_label.text = icon
+	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon_label.add_theme_font_size_override("font_size", FONT_SIZE_ICON)
+	icon_label.add_theme_color_override("font_shadow_color", color)
+	icon_label.add_theme_constant_override("shadow_offset_x", 0)
+	icon_label.add_theme_constant_override("shadow_offset_y", 2)
+	icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(icon_label)
+	_zone_icons[zone] = icon_label
+	
+	# Label texte XXL bold avec glow
 	var label := Label.new()
 	label.name = "Label"
 	label.text = label_text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 24)
+	label.add_theme_font_size_override("font_size", FONT_SIZE_LABEL)
 	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_color_override("font_outline_color", color.darkened(0.3))
+	label.add_theme_constant_override("outline_size", 3)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 2)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	zone_container.add_child(label)
-	
+	vbox.add_child(label)
 	_zone_labels[zone] = label
+	
+	# Barre de cooldown améliorée (invisible par défaut)
+	var cooldown_bar := ProgressBar.new()
+	cooldown_bar.name = "CooldownBar"
+	cooldown_bar.custom_minimum_size = Vector2(0, 8)
+	cooldown_bar.max_value = 100
+	cooldown_bar.value = 100
+	cooldown_bar.show_percentage = false
+	cooldown_bar.visible = false
+	cooldown_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	var bar_style_bg := StyleBoxFlat.new()
+	bar_style_bg.bg_color = Color(0.1, 0.1, 0.1, 0.9)
+	bar_style_bg.corner_radius_top_left = 4
+	bar_style_bg.corner_radius_top_right = 4
+	bar_style_bg.corner_radius_bottom_left = 4
+	bar_style_bg.corner_radius_bottom_right = 4
+	cooldown_bar.add_theme_stylebox_override("background", bar_style_bg)
+	
+	var bar_style_fill := StyleBoxFlat.new()
+	bar_style_fill.bg_color = Color("#10B981")  # Vert émeraude
+	bar_style_fill.corner_radius_top_left = 4
+	bar_style_fill.corner_radius_top_right = 4
+	bar_style_fill.corner_radius_bottom_left = 4
+	bar_style_fill.corner_radius_bottom_right = 4
+	cooldown_bar.add_theme_stylebox_override("fill", bar_style_fill)
+	
+	vbox.add_child(cooldown_bar)
+	_zone_cooldown_bars[zone] = cooldown_bar
 
+
+# =============================================================================
+# INPUT HANDLING
+# =============================================================================
 
 func _gui_input(event: InputEvent) -> void:
-	# Gérer touch screen
 	if event is InputEventScreenTouch:
 		_handle_touch(event as InputEventScreenTouch)
-	# Gérer souris (pour debug PC)
 	elif event is InputEventMouseButton:
 		_handle_mouse(event as InputEventMouseButton)
 
@@ -144,7 +267,6 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 	var local_pos := get_local_mouse_position()
 	var zone := _get_zone_from_position(local_pos)
 	
-	# Vérifier si CETTE zone est bloquée (pas tout le bouton)
 	if _zone_blocked.get(zone, false):
 		return
 	
@@ -161,7 +283,6 @@ func _handle_mouse(event: InputEventMouseButton) -> void:
 	var local_pos := event.position - global_position
 	var zone := _get_zone_from_position(local_pos)
 	
-	# Vérifier si CETTE zone est bloquée (pas tout le bouton)
 	if _zone_blocked.get(zone, false):
 		return
 	
@@ -171,9 +292,7 @@ func _handle_mouse(event: InputEventMouseButton) -> void:
 		_on_zone_released(zone)
 
 
-## Détermine la zone en fonction de la position X relative
 func _get_zone_from_position(local_pos: Vector2) -> Zone:
-	# Fallback si la taille n'est pas encore définie
 	var width := size.x if size.x > 0 else 680.0
 	var ratio_x := local_pos.x / width
 	
@@ -185,64 +304,65 @@ func _get_zone_from_position(local_pos: Vector2) -> Zone:
 		return Zone.ATTACK
 
 
+# =============================================================================
+# ZONE EVENTS
+# =============================================================================
+
 func _on_zone_pressed(zone: Zone) -> void:
 	print("[ClickZone] Zone pressed: ", ZONE_NAMES[zone], " | is_active: ", is_active)
 	_current_zone = zone
-	_show_feedback(zone, true)
+	_show_press_feedback(zone, true)
 	zone_pressed.emit(ZONE_NAMES[zone])
 
 
 func _on_zone_released(zone: Zone) -> void:
 	if _current_zone != null:
-		_show_feedback(_current_zone, false)
+		_show_press_feedback(_current_zone, false)
 	_current_zone = null
 	zone_released.emit(ZONE_NAMES[zone])
 
 
-## Affiche le feedback visuel de pression
-func _show_feedback(zone: Zone, pressed: bool) -> void:
+# =============================================================================
+# FEEDBACK VISUEL
+# =============================================================================
+
+func _show_press_feedback(zone: Zone, pressed: bool) -> void:
 	var rect: PanelContainer = _zone_rects.get(zone)
 	if not rect:
 		return
 	
-	var stylebox: StyleBoxFlat = rect.get_theme_stylebox("panel")
-	if not stylebox:
-		return
-	
-	# Annuler le tween précédent si existant
+	# Annuler le tween précédent
 	if _feedback_tweens.has(zone) and _feedback_tweens[zone]:
 		_feedback_tweens[zone].kill()
 	
-	var base_color: Color
-	match zone:
-		Zone.HEAL:
-			base_color = heal_color
-		Zone.DODGE:
-			base_color = dodge_color
-		Zone.ATTACK:
-			base_color = attack_color
-	
-	var target_color: Color
-	if pressed:
-		target_color = base_color.lightened(highlight_intensity)
-	else:
-		target_color = base_color
-	
-	# Animation de couleur
 	var tween := create_tween()
-	tween.tween_property(stylebox, "bg_color", target_color, feedback_duration)
 	_feedback_tweens[zone] = tween
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_BACK)
+	
+	if pressed:
+		# Effet pressed: scale down 0.95 + shift down 3px + assombrissement
+		tween.set_parallel(true)
+		tween.tween_property(rect, "scale", Vector2(0.92, 0.92), feedback_duration)
+		tween.tween_property(rect, "position:y", rect.position.y + 3, feedback_duration)
+		tween.tween_property(rect, "modulate", Color(0.75, 0.75, 0.75, 1.0), feedback_duration)
+	else:
+		# Restaurer avec légère animation bounce
+		tween.set_parallel(true)
+		tween.tween_property(rect, "scale", Vector2(1.0, 1.0), feedback_duration * 1.5)
+		tween.tween_property(rect, "position:y", rect.position.y - 3, feedback_duration)
+		tween.tween_property(rect, "modulate", Color.WHITE, feedback_duration)
 
 
-## Active ou désactive le bouton entier (legacy)
+# =============================================================================
+# ÉTAT DU BOUTON
+# =============================================================================
+
 func set_active(active: bool) -> void:
 	is_active = active
-	
-	# Feedback visuel de désactivation
 	modulate.a = 1.0 if active else 0.5
 
 
-## Bloque une zone spécifique avec timer comme les skills
 func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: float = 0.0) -> void:
 	var zone: Zone
 	match zone_name:
@@ -255,13 +375,16 @@ func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: floa
 		_:
 			return
 	
-	# Éviter de mettre à jour si l'état n'a pas changé (sauf pour le timer)
 	if _zone_blocked[zone] == blocked and not blocked:
 		return
 	
 	_zone_blocked[zone] = blocked
 	
 	var rect: PanelContainer = _zone_rects.get(zone)
+	var label: Label = _zone_labels.get(zone)
+	var icon: Label = _zone_icons.get(zone)
+	var cooldown_bar: ProgressBar = _zone_cooldown_bars.get(zone)
+	
 	if not rect:
 		return
 	
@@ -269,53 +392,44 @@ func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: floa
 	if not stylebox:
 		return
 	
-	var label: Label = _zone_labels.get(zone)
-	
 	if blocked:
-		# Style désactivé comme les skills
-		stylebox.bg_color = Color(0.2, 0.2, 0.2, 0.7)
-		stylebox.border_width_left = 2
-		stylebox.border_width_top = 2
-		stylebox.border_width_right = 2
-		stylebox.border_width_bottom = 2
-		stylebox.border_color = Color(0.5, 0.5, 0.5, 0.5)
+		# Style désactivé
+		stylebox.bg_color = COLOR_DISABLED
+		stylebox.border_color = Color(0.4, 0.4, 0.4, 0.5)
+		stylebox.shadow_size = 1
 		
 		if label:
-			# Afficher le timer comme les skills
 			label.text = "%.1fs" % time_remaining
 			label.modulate.a = 0.6
+		if icon:
+			icon.modulate.a = 0.4
+		if cooldown_bar:
+			cooldown_bar.visible = true
+			cooldown_bar.value = 0
 	else:
-		# Restaurer la couleur et le style original
-		var original_color: Color
-		var original_name: String = _zone_original_names[zone]
-		match zone:
-			Zone.HEAL:
-				original_color = heal_color
-			Zone.DODGE:
-				original_color = dodge_color
-			Zone.ATTACK:
-				original_color = attack_color
-		
-		stylebox.bg_color = original_color
-		stylebox.border_width_left = 0
-		stylebox.border_width_top = 0
-		stylebox.border_width_right = 0
-		stylebox.border_width_bottom = 0
+		# Restaurer le style original
+		var original_style: StyleBoxFlat = _zone_styles.get(zone)
+		if original_style:
+			stylebox.bg_color = original_style.bg_color
+			stylebox.border_color = original_style.border_color
+			stylebox.shadow_size = original_style.shadow_size
 		
 		if label:
-			label.text = original_name
+			label.text = _zone_original_names[zone]
 			label.modulate.a = 1.0
+		if icon:
+			icon.modulate.a = 1.0
+		if cooldown_bar:
+			cooldown_bar.visible = false
+			cooldown_bar.value = 100
 
 
-## Vérifie si une zone spécifique est cliquable
 func is_zone_active(_zone_name: StringName) -> bool:
 	if not is_active:
 		return false
-	# Ici on pourrait ajouter une vérification des zones bloquées
 	return true
 
 
-## Retourne le nom de la zone actuellement pressée (ou "" si aucune)
 func get_current_zone_name() -> StringName:
 	if _current_zone == null:
 		return &""

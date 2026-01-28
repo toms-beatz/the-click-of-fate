@@ -31,18 +31,18 @@ const PRESSURE_INCREMENT := {
 	&"attack": 8.0   # Attack spam = léger
 }
 
-## Durées de punition VARIABLES par type d'overload
+## Durées de punition VARIABLES par type d'overload (+2s chacun)
 const PUNISHMENT_DURATION := {
-	&"heal": 5.0,   # Heal overload = 5s (soigner trop = dangereux)
-	&"dodge": 4.0,  # Dodge overload = 4s  
-	&"attack": 3.0  # Attack overload = 3s (le plus court)
+	&"heal": 7.0,   # Heal overload = 7s (était 5s)
+	&"dodge": 6.0,  # Dodge overload = 6s (était 4s)
+	&"attack": 5.0  # Attack overload = 5s (était 3s)
 }
 
 ## Seuil de déclenchement de la punition
 const PRESSURE_THRESHOLD := 100.0
 
-## Taux de decay par seconde (pour chaque jauge) - PLUS RAPIDE
-const DECAY_RATE := 5.0
+## Taux de decay par seconde (pour chaque jauge) - TRÈS RAPIDE
+const DECAY_RATE := 20.0
 
 
 ## Valeurs actuelles des jauges {action_type: float}
