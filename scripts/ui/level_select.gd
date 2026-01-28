@@ -167,36 +167,24 @@ var background_rect: TextureRect
 const BACKGROUND_PATH := "res://assets/sprites/background/background-menu-selection.png"
 
 func _create_background() -> void:
-	# Créer un CanvasLayer séparé pour le background (couche -1 = derrière tout)
-	background_layer = CanvasLayer.new()
-	background_layer.name = "BackgroundLayer"
-	background_layer.layer = -1  # Derrière tout le reste
-	add_child(background_layer)
-	
-	# Créer le TextureRect pour afficher le background
-	background_rect = TextureRect.new()
-	background_rect.name = "BackgroundImage"
-	
-	# Charger la texture
+	# Utilise le TextureRect existant dans la scène
+	var bg_node = get_node_or_null("BackgroundImage")
+	if not bg_node:
+		push_warning("BackgroundImage node not found in scene!")
+		return
 	var bg_texture = load(BACKGROUND_PATH)
 	if bg_texture:
-		background_rect.texture = bg_texture
+		bg_node.texture = bg_texture
 	else:
 		push_warning("Background non trouvé: " + BACKGROUND_PATH)
 		return
-	
-	# Configuration pour couvrir tout l'écran
-	background_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background_rect.stretch_mode = TextureRect.STRETCH_SCALE
-	background_rect.modulate = Color(1.0, 1.0, 1.0, 0.5)  # 50% d'opacité
-	background_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
-	# Taille = viewport entier
-	background_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg_node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg_node.stretch_mode = TextureRect.STRETCH_SCALE
+	bg_node.modulate = Color(0.3, 0.3, 0.3, 1)
+	bg_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg_node.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var viewport_size := get_viewport().get_visible_rect().size
-	background_rect.size = viewport_size
-	
-	background_layer.add_child(background_rect)
+	bg_node.size = viewport_size
 
 
 func _update_displays() -> void:
@@ -265,7 +253,6 @@ func _create_planet_carousel() -> void:
 func _create_planet_node(index: int, highest_completed: int) -> Control:
 	var info: Dictionary = PLANETS_INFO[index]
 	var is_unlocked: bool = index <= highest_completed + 1
-	var is_completed: bool = index <= highest_completed
 	
 	# Container principal
 	var container := Control.new()
@@ -316,31 +303,23 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		
 		container.add_child(planet_visual)
 	
-	# Badge de complétion (checkmark vert)
-	if is_completed:
-		var check_label := Label.new()
-		check_label.name = "Check"
-		check_label.text = "✓"
-		var check_size: int = int(planet_size_center * 0.15)
-		check_label.add_theme_font_size_override("font_size", check_size)
-		check_label.add_theme_color_override("font_color", Color.GREEN)
-		check_label.position = Vector2(planet_size_center - check_size - 10, 5)
-		container.add_child(check_label)
+	# Plus de tick de complétion
 	
-	# Cadenas si verrouillé
+	# Cadenas + planète assombrie si verrouillée
 	if not is_unlocked:
+		# Ajoute un cadenas centré
 		var lock_container := Control.new()
 		lock_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 		container.add_child(lock_container)
-		
 		var lock_label := Label.new()
 		lock_label.name = "Lock"
 		lock_label.text = "🔒"
-		lock_label.add_theme_font_size_override("font_size", 52)
+		lock_label.add_theme_font_size_override("font_size", int(planet_size_center * 0.35))
 		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lock_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 		lock_container.add_child(lock_label)
+		# Assombrit la planète (sprite ou colorrect déjà grisé plus haut)
 	
 	# Stocker les métadonnées
 	container.set_meta("planet_index", index)
@@ -567,15 +546,11 @@ func _animate_entrance() -> void:
 # ==================== SPACESHIPS BACKGROUND ====================
 
 func _create_spaceships_background() -> void:
-	# Créer le container en arrière-plan (z_index négatif)
-	spaceships_container = Control.new()
-	spaceships_container.name = "SpaceshipsBackground"
-	spaceships_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	spaceships_container.z_index = -10  # Derrière le contenu, devant le background
-	spaceships_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(spaceships_container)
-	move_child(spaceships_container, 1)  # Après le background (index 0)
-	
+	# Utilise le node existant dans la scène
+	spaceships_container = get_node_or_null("SpaceshipsBackground")
+	if not spaceships_container:
+		push_warning("SpaceshipsBackground node not found in scene!")
+		return
 	# Spawner quelques vaisseaux initiaux
 	for i in range(4):
 		_spawn_spaceship(true)
