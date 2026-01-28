@@ -291,13 +291,6 @@ func _setup_background() -> void:
 		# Fallback: Use colored gradient if image not found
 		print("[GameCombat] Background image not found at %s, using gradient fallback" % bg_image_path)
 		_setup_background_gradient_fallback()
-	
-	# Add dark overlay for UI readability (10% darkness)
-	var overlay := ColorRect.new()
-	overlay.name = "BackgroundOverlay"
-	overlay.color = Color(0, 0, 0, 0.1)
-	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.add_child(overlay)
 
 
 func _get_background_image_path(planet_id: int) -> String:
@@ -372,13 +365,13 @@ func _setup_combat_zone() -> void:
 	# Container pour le héros (côté gauche - rapproché du centre - BMAD MODE)
 	hero_container = Control.new()
 	hero_container.name = "HeroContainer"
-	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.40)  # BMAD: rapproché du centre
+	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.55)  # BMAD: Descend au niveau bande noire (était 0.40)
 	combat_zone.add_child(hero_container)
 	
 	# Container pour les ennemis (côté droit - rapproché du centre - BMAD MODE)
 	enemy_container = Control.new()
 	enemy_container.name = "EnemyContainer"
-	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.40)  # BMAD: rapproché du centre
+	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.55)  # BMAD: Descend au niveau bande noire (était 0.40)
 	combat_zone.add_child(enemy_container)
 	
 	# Sol/Platform visuel (couvre toute la largeur)
