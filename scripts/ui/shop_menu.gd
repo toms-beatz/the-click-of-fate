@@ -15,6 +15,37 @@ extends Control
 
 ## Scène de sélection de niveau
 const LEVEL_SELECT_SCENE := "res://scenes/ui/level_select.tscn"
+## Configuration des packs de coins (argent réel simulé)
+const COIN_PACKS := {
+	"pack_small": {
+		"name": "Petit Pack",
+		"icon": "💰",
+		"coins": 500,
+		"price": "0.99€",
+		"bonus": ""
+	},
+	"pack_medium": {
+		"name": "Pack Moyen",
+		"icon": "💰💰",
+		"coins": 1200,
+		"price": "1.99€",
+		"bonus": "+20%"
+	},
+	"pack_large": {
+		"name": "Grand Pack",
+		"icon": "💰💰💰",
+		"coins": 3000,
+		"price": "4.99€",
+		"bonus": "+50%"
+	},
+	"pack_mega": {
+		"name": "Méga Pack",
+		"icon": "👑",
+		"coins": 8000,
+		"price": "9.99€",
+		"bonus": "+100%"
+	}
+}
 
 ## Configuration des boosters
 const BOOSTERS := {
@@ -52,38 +83,6 @@ const BOOSTERS := {
 		"description": "+15% Toutes stats (1 partie)",
 		"cost": 200,
 		"effect": {"all": 1.15}
-	}
-}
-
-## Configuration des packs de coins (argent réel simulé)
-const COIN_PACKS := {
-	"pack_small": {
-		"name": "Petit Pack",
-		"icon": "💰",
-		"coins": 500,
-		"price": "0.99€",
-		"bonus": ""
-	},
-	"pack_medium": {
-		"name": "Pack Moyen",
-		"icon": "💰💰",
-		"coins": 1200,
-		"price": "1.99€",
-		"bonus": "+20%"
-	},
-	"pack_large": {
-		"name": "Grand Pack",
-		"icon": "💰💰💰",
-		"coins": 3000,
-		"price": "4.99€",
-		"bonus": "+50%"
-	},
-	"pack_mega": {
-		"name": "Méga Pack",
-		"icon": "👑",
-		"coins": 8000,
-		"price": "9.99€",
-		"bonus": "+100%"
 	}
 }
 

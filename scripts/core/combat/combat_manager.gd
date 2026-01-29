@@ -55,6 +55,9 @@ var _pending_crit_bonus: float = 0.0
 ## Bonus d'esquive actif
 var _active_dodge_bonus: float = 0.0
 
+## COF-908: Bonus de heal des upgrades/équipements (défini par game_combat_scene)
+var heal_power_bonus: int = 0
+
 
 func _ready() -> void:
 	_connect_systems()
@@ -147,8 +150,13 @@ func _do_heal() -> void:
 		return
 	
 	hero_pose_changed.emit(&"special", 0.5)  # Pose dual-wield pour heal burst
-	print("[CombatManager] Healing hero by ", BASE_HEAL_PERCENT * 100, "%")
-	var healed := hero.heal_percent(BASE_HEAL_PERCENT)
+	
+	# COF-908: Calcul du heal avec les bonus d'upgrades/équipements
+	var base_heal := int(hero.base_stats.max_hp * BASE_HEAL_PERCENT)
+	var total_heal := base_heal + heal_power_bonus
+	
+	print("[CombatManager] Healing hero: base=%d + bonus=%d = %d HP" % [base_heal, heal_power_bonus, total_heal])
+	var healed := hero.heal(total_heal)
 	print("[CombatManager] Healed amount: ", healed)
 	if healed > 0:
 		hero_healed.emit(healed)

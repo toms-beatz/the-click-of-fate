@@ -120,9 +120,20 @@ func _on_currency_changed(_new_amount: int) -> void:
 ## Calcule la puissance totale du joueur
 func _calculate_player_power() -> int:
 	if not SaveManager:
-		return 50
+		return 100
 	
-	var power := 50  # Base
+	var power := 100  # Base de 100
+	
+	# Bonus de progression par planète complétée
+	var highest_completed: int = SaveManager.get_highest_planet_completed()
+	var progression_bonus := {
+		-1: 0,    # Aucune planète terminée
+		0: 50,    # Mercury terminée
+		1: 100,   # Venus terminée
+		2: 180,   # Mars terminée
+		3: 300,   # Earth terminée (max)
+	}
+	power += progression_bonus.get(highest_completed, 0)
 	
 	# Bonus des upgrades
 	for upgrade_id in UPGRADES_CONFIG:

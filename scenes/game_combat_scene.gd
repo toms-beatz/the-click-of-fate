@@ -188,12 +188,12 @@ const PLANET_RECOMMENDED_POWER := {
 	3: 270,   # Earth - après Mars
 }
 
-## Boss par planète (après les 5 vagues)
+## Boss par planète (après les 5 vagues) - Plus durs que la vague 5!
 const PLANET_BOSSES := {
-	0: {"name": "Mercury Guardian", "hp": 400, "atk": 20, "speed": 1.0, "color": Color(1.0, 0.5, 0.2), "emoji": "🛡️", "special": "shield"},
-	1: {"name": "Venus Queen", "hp": 550, "atk": 25, "speed": 0.9, "color": Color(0.8, 0.9, 0.2), "emoji": "👑", "special": "poison"},
-	2: {"name": "Mars Warlord", "hp": 700, "atk": 30, "speed": 0.8, "color": Color(0.9, 0.4, 0.3), "emoji": "⚔️", "special": "rage"},
-	3: {"name": "DR. MORTIS", "hp": 1800, "atk": 45, "speed": 0.6, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},  # BOSS FINAL! BMAD Mode: HP 1500→1800 (+20%), ATK 40→45 (+12.5%)
+	0: {"name": "Mercury Guardian", "hp": 600, "atk": 28, "speed": 0.9, "color": Color(1.0, 0.5, 0.2), "emoji": "🛡️", "special": "shield"},
+	1: {"name": "Venus Queen", "hp": 800, "atk": 35, "speed": 0.85, "color": Color(0.8, 0.9, 0.2), "emoji": "👑", "special": "poison"},
+	2: {"name": "Mars Warlord", "hp": 1000, "atk": 42, "speed": 0.75, "color": Color(0.9, 0.4, 0.3), "emoji": "⚔️", "special": "rage"},
+	3: {"name": "DR. MORTIS", "hp": 2200, "atk": 55, "speed": 0.6, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},  # BOSS FINAL!
 }
 
 ## Cinématique de fin (après avoir battu Dr. Mortis)
@@ -207,6 +207,25 @@ const ENDING_CINEMATIC := [
 	{"text": "My journey is not over. It has only just begun.", "emoji": "🚀"},
 	{"text": "TO BE CONTINUED...", "emoji": "⏳"},
 ]
+
+## COF-908: Configuration des équipements (bonus par item)
+const EQUIPMENT_BONUSES := {
+	# Armes (bonus attack_power)
+	"sword_basic": {"attack_power": 5},
+	"sword_flame": {"attack_power": 12},
+	"sword_cosmic": {"attack_power": 25},
+	# Armures (bonus dodge_chance en %)
+	"armor_light": {"dodge_chance": 5},
+	"armor_shadow": {"dodge_chance": 10},
+	"armor_cosmic": {"dodge_chance": 18},
+	# Casques (bonus heal_power)
+	"helmet_basic": {"heal_power": 3},
+	"helmet_nature": {"heal_power": 8},
+	"helmet_cosmic": {"heal_power": 15},
+}
+
+## COF-908: Bonus de heal des upgrades/équipements (passé au combat_manager)
+var _heal_power_bonus: int = 0
 
 ## Cinématiques par planète
 const PLANET_CINEMATICS := {
@@ -426,19 +445,48 @@ func _setup_hero() -> void:
 	var hp_mult: float = power_data.hp_mult
 	var atk_mult: float = power_data.atk_mult
 	
+	# ===== COF-908: Récupérer les bonus des upgrades =====
+	var hp_upgrade_bonus := 0
+	var atk_upgrade_bonus := 0
+	var dodge_upgrade_bonus := 0.0
+	var heal_upgrade_bonus := 0
+	
+	if SaveManager:
+		hp_upgrade_bonus = SaveManager.get_upgrade_level("max_hp") * 15
+		atk_upgrade_bonus = SaveManager.get_upgrade_level("attack_power") * 2
+		dodge_upgrade_bonus = SaveManager.get_upgrade_level("dodge_chance") * 0.02
+		heal_upgrade_bonus = SaveManager.get_upgrade_level("heal_power") * 2
+	
+	# ===== COF-908: Récupérer les bonus des équipements =====
+	var equip_atk_bonus := _get_equipment_bonus("attack_power")
+	var equip_dodge_bonus := _get_equipment_bonus("dodge_chance") * 0.01  # % converti en décimal
+	var equip_heal_bonus := _get_equipment_bonus("heal_power")
+	
+	# Appliquer toutes les stats avec upgrades + équipements
 	var hero_stats := EntityStats.new()
 	hero_stats.display_name = "Alien Hero"
-	hero_stats.max_hp = int(HERO_BASE_HP * hp_mult)
-	hero_stats.attack = int(HERO_BASE_ATTACK * atk_mult)
+	hero_stats.max_hp = int(HERO_BASE_HP * hp_mult) + hp_upgrade_bonus
+	hero_stats.attack = int(HERO_BASE_ATTACK * atk_mult) + atk_upgrade_bonus + equip_atk_bonus
 	hero_stats.attack_speed = HERO_ATTACK_SPEED
 	hero_stats.crit_chance = HERO_CRIT_CHANCE
-	hero_stats.dodge_chance = HERO_DODGE_CHANCE
+	hero_stats.dodge_chance = HERO_DODGE_CHANCE + dodge_upgrade_bonus + equip_dodge_bonus
 	hero.base_stats = hero_stats
 	
-	print("[GameCombat] Hero power level: %d (completed planet %d) - HP: %d, ATK: %d" % [power_data.power, highest_completed, hero_stats.max_hp, hero_stats.attack])
+	# COF-908: Stocker le heal bonus pour le combat manager
+	_heal_power_bonus = heal_upgrade_bonus + equip_heal_bonus
+	
+	print("[GameCombat] Hero stats with upgrades - HP: %d (+%d), ATK: %d (+%d+%d), Dodge: %.1f%% (+%.1f%%+%.1f%%), Heal bonus: +%d" % [
+		hero_stats.max_hp, hp_upgrade_bonus,
+		hero_stats.attack, atk_upgrade_bonus, equip_atk_bonus,
+		hero_stats.dodge_chance * 100, dodge_upgrade_bonus * 100, equip_dodge_bonus * 100,
+		_heal_power_bonus
+	])
 	
 	hero_container.add_child(hero)
 	combat_manager.hero = hero
+	
+	# COF-908: Passer le bonus de heal au combat manager
+	combat_manager.heal_power_bonus = _heal_power_bonus
 	
 	# Reconnecter les signaux du héros dans le combat manager
 	# (nécessaire car le hero est assigné après _ready du combat_manager)
@@ -446,6 +494,21 @@ func _setup_hero() -> void:
 	
 	# Visuel du héros
 	_create_hero_visual()
+
+
+## COF-908: Calcule le bonus d'équipement pour une stat donnée
+func _get_equipment_bonus(stat: String) -> int:
+	if not SaveManager:
+		return 0
+	
+	var total_bonus := 0
+	
+	for slot in ["weapon", "armor", "helmet"]:
+		var equipped := SaveManager.get_equipped(slot)
+		if equipped != "" and EQUIPMENT_BONUSES.has(equipped):
+			total_bonus += EQUIPMENT_BONUSES[equipped].get(stat, 0)
+	
+	return total_bonus
 
 
 func _create_hero_visual() -> void:

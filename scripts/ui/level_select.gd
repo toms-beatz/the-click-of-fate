@@ -207,24 +207,54 @@ func _on_currency_changed(_new_amount: int) -> void:
 	_update_displays()
 
 
-## Calcule la puissance du joueur basée sur la progression (comme dans le combat)
+## Calcule la puissance du joueur basée sur progression + upgrades + équipements
 func _calculate_player_power() -> int:
 	if not SaveManager:
 		return 100  # Valeur de base
 	
-	# Utiliser le même système que le combat
+	var power := 100  # Base de 100
+	
+	# Bonus de progression par planète complétée
 	var highest_completed: int = SaveManager.get_highest_planet_completed()
-	
-	# Puissance par planète complétée (aligné avec HERO_POWER_PER_PLANET dans game_combat_scene)
-	var power_table := {
-		-1: 100,   # Aucune planète terminée
-		0: 150,    # Mercury terminée
-		1: 200,    # Venus terminée
-		2: 280,    # Mars terminée
-		3: 400,    # Earth terminée (max)
+	var progression_bonus := {
+		-1: 0,    # Aucune planète terminée
+		0: 50,    # Mercury terminée
+		1: 100,   # Venus terminée
+		2: 180,   # Mars terminée
+		3: 300,   # Earth terminée (max)
 	}
+	power += progression_bonus.get(highest_completed, 0)
 	
-	return power_table.get(highest_completed, 100)
+	# Bonus des upgrades (même formule que profile_menu)
+	var upgrades_config := {
+		"max_hp": {"per_level": 15},
+		"attack_power": {"per_level": 2},
+		"dodge_chance": {"per_level": 2},
+		"heal_power": {"per_level": 2}
+	}
+	for upgrade_id in upgrades_config:
+		var level := SaveManager.get_upgrade_level(upgrade_id)
+		power += level * int(upgrades_config[upgrade_id]["per_level"] * 0.8)
+	
+	# Bonus des équipements
+	var equipment_data := {
+		"sword_basic": {"attack_power": 5},
+		"sword_flame": {"attack_power": 12},
+		"sword_cosmic": {"attack_power": 25},
+		"armor_light": {"dodge_chance": 5},
+		"armor_shadow": {"dodge_chance": 10},
+		"armor_cosmic": {"dodge_chance": 18},
+		"helmet_basic": {"heal_power": 3},
+		"helmet_nature": {"heal_power": 8},
+		"helmet_cosmic": {"heal_power": 15},
+	}
+	for slot in ["weapon", "armor", "helmet"]:
+		var equipped := SaveManager.get_equipped(slot)
+		if equipped != "" and equipment_data.has(equipped):
+			for stat in equipment_data[equipped]:
+				power += equipment_data[equipped][stat]
+	
+	return power
 
 
 func _create_planet_carousel() -> void:
