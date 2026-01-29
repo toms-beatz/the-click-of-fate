@@ -454,7 +454,7 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 	ring.add_child(ring_bg)
 	
 	# Image de la planète (TextureRect) ou ColorRect fallback
-	var sprite_path: String = info.get("sprite", "")
+	var sprite_path := info.get("sprite", "") as String
 	if ResourceLoader.exists(sprite_path):
 		var planet_sprite := TextureRect.new()
 		planet_sprite.name = "PlanetVisual"

@@ -343,7 +343,7 @@ func _get_background_image_path(planet_id: int) -> String:
 
 func _setup_background_gradient_fallback() -> void:
 	# COF-808: Fallback to colored gradient if images not found (COF-807 colors)
-	var planet_colors: Dictionary = PLANET_COLORS.get(current_planet, PLANET_COLORS[0])
+	var planet_colors := PLANET_COLORS.get(current_planet, PLANET_COLORS[0]) as Dictionary
 	
 	# Base color background
 	var bg_rect := ColorRect.new()
@@ -786,7 +786,7 @@ func _create_bottom_hud(parent: Control) -> void:
 	var bottom_container := VBoxContainer.new()
 	bottom_container.name = "BottomContainer"
 	bottom_container.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom_container.anchor_top = 0.80  # 22% de l'écran pour les boutons (remis comme avant)
+	bottom_container.anchor_top = 0.75  # 22% de l'écran pour les boutons (remis comme avant)
 	bottom_container.add_theme_constant_override("separation", 8)
 	parent.add_child(bottom_container)
 	
@@ -803,7 +803,7 @@ func _create_bottom_hud(parent: Control) -> void:
 	var click_margin := MarginContainer.new()
 	click_margin.add_theme_constant_override("margin_left", 10)
 	click_margin.add_theme_constant_override("margin_right", 10)
-	click_margin.add_theme_constant_override("margin_bottom", 15)
+	click_margin.add_theme_constant_override("margin_bottom", 30)
 	bottom_container.add_child(click_margin)
 	
 	click_zone_button = ClickZoneButton.new()
@@ -1770,6 +1770,11 @@ func _set_enemy_sprite_pose(enemy: BaseEnemy, pose: String) -> void:
 
 
 func _on_enemy_died(enemy: BaseEnemy) -> void:
+	# Si la référence est invalide, nettoyer la liste et sortir
+	if not is_instance_valid(enemy):
+		active_enemies = active_enemies.filter(func(e): is_instance_valid(e))
+		return
+
 	active_enemies.erase(enemy)
 	
 	# Changer en sprite "hurt" avant la mort

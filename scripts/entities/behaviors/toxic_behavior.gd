@@ -44,12 +44,21 @@ static func apply_poison_to(target: BaseEntity) -> void:
 	var ticks_remaining := int(POISON_DURATION)
 	
 	poison_timer.timeout.connect(func():
+		# Vérifier que la cible et le timer sont toujours valides
+		if not is_instance_valid(target):
+			if is_instance_valid(poison_timer):
+				poison_timer.stop()
+				poison_timer.queue_free()
+			return
+
 		if target.is_alive:
 			target.take_damage(POISON_DPS, false)
+
 		ticks_remaining -= 1
 		if ticks_remaining <= 0:
-			poison_timer.stop()
-			poison_timer.queue_free()
+			if is_instance_valid(poison_timer):
+				poison_timer.stop()
+				poison_timer.queue_free()
 	)
 	
 	poison_timer.start()

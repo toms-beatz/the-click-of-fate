@@ -153,8 +153,15 @@ func _start_boss_wave() -> void:
 
 ## Callback quand un ennemi meurt
 func _on_enemy_died(enemy: BaseEnemy) -> void:
+	# Si référence invalide, nettoyer la liste et sortir
+	if not is_instance_valid(enemy):
+		active_enemies = active_enemies.filter(func(e): is_instance_valid(e))
+		if active_enemies.is_empty() and not is_spawning:
+			wave_cleared.emit()
+		return
+
 	active_enemies.erase(enemy)
-	
+    
 	# Vérifier si la vague est terminée
 	if active_enemies.is_empty() and not is_spawning:
 		wave_cleared.emit()
