@@ -87,32 +87,11 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="CarouselRow" type="HBoxContainer" parent="SafeAreaMargin/MainVBox/CarouselSection"]
-layout_mode = 2
-size_flags_vertical = 3
-alignment = 1
-
-[node name="LeftArrow" type="Button" parent="SafeAreaMargin/MainVBox/CarouselSection/CarouselRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 32
-text = "‹"
-
-[node name="CarouselContainer" type="Control" parent="SafeAreaMargin/MainVBox/CarouselSection/CarouselRow"]
+[node name="CarouselContainer" type="Control" parent="SafeAreaMargin/MainVBox/CarouselSection"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-
-[node name="RightArrow" type="Button" parent="SafeAreaMargin/MainVBox/CarouselSection/CarouselRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 32
-text = "›"
 
 [node name="PlanetInfoSection" type="VBoxContainer" parent="SafeAreaMargin/MainVBox"]
 layout_mode = 2

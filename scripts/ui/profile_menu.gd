@@ -107,19 +107,58 @@ const UPGRADES_CONFIG := {
 ## Données des équipements (avec images)
 const EQUIPMENT_DATA := {
 	"weapon": {"title": "ARMES", "icon": "⚔️", "items": [
+		# Shop items
 		{"id": "sword_basic", "name": "Pistolet Basique", "bonus": "+5 DMG", "bonus_value": 5, "stat": "attack_power", "image": "res://assets/sprites/ui/équipements/armes/pistolet basique.png"},
 		{"id": "sword_flame", "name": "Pistolet Puissant", "bonus": "+12 DMG", "bonus_value": 12, "stat": "attack_power", "image": "res://assets/sprites/ui/équipements/armes/pistolet plus fort.png"},
-		{"id": "sword_cosmic", "name": "Pistolet Royal", "bonus": "+25 DMG", "bonus_value": 25, "stat": "attack_power", "image": "res://assets/sprites/ui/équipements/armes/pistolet royal.png"}
+		{"id": "sword_cosmic", "name": "Pistolet Royal", "bonus": "+25 DMG", "bonus_value": 25, "stat": "attack_power", "image": "res://assets/sprites/ui/équipements/armes/pistolet royal.png"},
+		# Gacha Common
+		{"id": "sword_iron", "name": "Iron Blade", "bonus": "+3 DMG", "bonus_value": 3, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_iron.png"},
+		{"id": "sword_steel", "name": "Steel Sword", "bonus": "+4 DMG", "bonus_value": 4, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_steel.png"},
+		{"id": "sword_bronze", "name": "Bronze Cutter", "bonus": "+5 DMG", "bonus_value": 5, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_bronze.png"},
+		# Gacha Rare
+		{"id": "sword_crystal", "name": "Crystal Edge", "bonus": "+8 DMG", "bonus_value": 8, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_crystal.png"},
+		{"id": "sword_thunder", "name": "Thunder Blade", "bonus": "+10 DMG", "bonus_value": 10, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_thunder.png"},
+		{"id": "sword_frost", "name": "Frost Fang", "bonus": "+12 DMG", "bonus_value": 12, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_frost.png"},
+		# Gacha Legendary
+		{"id": "sword_dragon", "name": "Dragon Slayer", "bonus": "+18 DMG", "bonus_value": 18, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_dragon.png"},
+		{"id": "sword_void", "name": "Void Reaper", "bonus": "+22 DMG", "bonus_value": 22, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_void.png"},
+		{"id": "sword_divine", "name": "Divine Excalibur", "bonus": "+28 DMG", "bonus_value": 28, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_divine.png"}
 	]},
 	"armor": {"title": "ARMURES", "icon": "🛡️", "items": [
+		# Shop items
 		{"id": "armor_light", "name": "Armure Basique", "bonus": "+5% ESQ", "bonus_value": 5, "stat": "dodge_chance", "image": "res://assets/sprites/ui/équipements/armures/armure basique.png"},
 		{"id": "armor_shadow", "name": "Armure Renforcée", "bonus": "+10% ESQ", "bonus_value": 10, "stat": "dodge_chance", "image": "res://assets/sprites/ui/équipements/armures/armure_plus_fort.png"},
-		{"id": "armor_cosmic", "name": "Armure Royale", "bonus": "+18% ESQ", "bonus_value": 18, "stat": "dodge_chance", "image": "res://assets/sprites/ui/équipements/armures/armure royal.png"}
+		{"id": "armor_cosmic", "name": "Armure Royale", "bonus": "+18% ESQ", "bonus_value": 18, "stat": "dodge_chance", "image": "res://assets/sprites/ui/équipements/armures/armure royal.png"},
+		# Gacha Common
+		{"id": "armor_leather", "name": "Leather Vest", "bonus": "+3% ESQ", "bonus_value": 3, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_leather.png"},
+		{"id": "armor_chainmail", "name": "Chainmail", "bonus": "+4% ESQ", "bonus_value": 4, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_chainmail.png"},
+		{"id": "armor_iron", "name": "Iron Plate", "bonus": "+5% ESQ", "bonus_value": 5, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_iron.png"},
+		# Gacha Rare
+		{"id": "armor_crystal", "name": "Crystal Guard", "bonus": "+8% ESQ", "bonus_value": 8, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_crystal.png"},
+		{"id": "armor_thunder", "name": "Storm Armor", "bonus": "+10% ESQ", "bonus_value": 10, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_thunder.png"},
+		{"id": "armor_frost", "name": "Frost Mail", "bonus": "+12% ESQ", "bonus_value": 12, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_frost.png"},
+		# Gacha Legendary
+		{"id": "armor_dragon", "name": "Dragon Scale", "bonus": "+16% ESQ", "bonus_value": 16, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_dragon.png"},
+		{"id": "armor_void", "name": "Void Shroud", "bonus": "+20% ESQ", "bonus_value": 20, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_void.png"},
+		{"id": "armor_divine", "name": "Divine Aegis", "bonus": "+25% ESQ", "bonus_value": 25, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_divine.png"}
 	]},
 	"helmet": {"title": "CASQUES", "icon": "⛑️", "items": [
+		# Shop items
 		{"id": "helmet_basic", "name": "Casque Basique", "bonus": "+3 SOIN", "bonus_value": 3, "stat": "heal_power", "image": "res://assets/sprites/ui/équipements/casques/casque basique.png"},
 		{"id": "helmet_nature", "name": "Casque Renforcé", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "image": "res://assets/sprites/ui/équipements/casques/casque plus fort.png"},
-		{"id": "helmet_cosmic", "name": "Casque Royal", "bonus": "+15 SOIN", "bonus_value": 15, "stat": "heal_power", "image": "res://assets/sprites/ui/équipements/casques/casque royal.png"}
+		{"id": "helmet_cosmic", "name": "Casque Royal", "bonus": "+15 SOIN", "bonus_value": 15, "stat": "heal_power", "image": "res://assets/sprites/ui/équipements/casques/casque royal.png"},
+		# Gacha Common
+		{"id": "helmet_leather", "name": "Leather Cap", "bonus": "+2 SOIN", "bonus_value": 2, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_leather.png"},
+		{"id": "helmet_iron", "name": "Iron Helm", "bonus": "+3 SOIN", "bonus_value": 3, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_iron.png"},
+		{"id": "helmet_steel", "name": "Steel Visor", "bonus": "+4 SOIN", "bonus_value": 4, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_steel.png"},
+		# Gacha Rare
+		{"id": "helmet_crystal", "name": "Crystal Crown", "bonus": "+6 SOIN", "bonus_value": 6, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_crystal.png"},
+		{"id": "helmet_thunder", "name": "Storm Hood", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_thunder.png"},
+		{"id": "helmet_frost", "name": "Frost Helm", "bonus": "+10 SOIN", "bonus_value": 10, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_frost.png"},
+		# Gacha Legendary
+		{"id": "helmet_dragon", "name": "Dragon Horns", "bonus": "+14 SOIN", "bonus_value": 14, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_dragon.png"},
+		{"id": "helmet_void", "name": "Void Mask", "bonus": "+18 SOIN", "bonus_value": 18, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_void.png"},
+		{"id": "helmet_divine", "name": "Divine Halo", "bonus": "+22 SOIN", "bonus_value": 22, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_divine.png"}
 	]}
 }
 
@@ -130,14 +169,17 @@ const EQUIPMENT_DATA := {
 var viewport_size: Vector2
 var back_button: Button
 var currency_label: Label
+var power_label: Label
 var stats_grid: GridContainer
 var hero_sprite: TextureRect
 var equipped_container: HBoxContainer
-var inventory_tabs_container: HBoxContainer
-var inventory_grid: GridContainer
-var current_inventory_tab: String = "weapon"
-var inventory_tab_buttons: Dictionary = {}
+var inventory_container: Control
 var stars_container: Control
+
+## Références aux ScrollContainers d'inventaire par catégorie
+var inventory_scroll_containers := {}
+## Items possédés par catégorie (cache)
+var owned_items_cache := {"weapon": [], "armor": [], "helmet": []}
 
 
 # =============================================================================
@@ -168,6 +210,7 @@ func _setup_full_ui() -> void:
 	# 4. Connexions et données
 	_connect_signals()
 	_update_currency_display()
+	_update_power_display()
 	_populate_stats_grid()
 	_populate_equipped_cards()
 	_populate_inventory()
@@ -356,6 +399,36 @@ func _create_header(parent: Control) -> void:
 	currency_label.add_theme_font_size_override("font_size", CURRENCY_FONT_SIZE)
 	currency_label.add_theme_color_override("font_color", COLOR_NEON_GOLD)
 	currency_panel.add_child(currency_label)
+	
+	# Panel Power (à gauche de currency)
+	var power_panel := PanelContainer.new()
+	power_panel.name = "PowerPanel"
+	var power_style := StyleBoxFlat.new()
+	power_style.bg_color = Color(0.05, 0.05, 0.15, 0.9)
+	power_style.corner_radius_top_left = 10
+	power_style.corner_radius_top_right = 10
+	power_style.corner_radius_bottom_left = 10
+	power_style.corner_radius_bottom_right = 10
+	power_style.border_width_left = 2
+	power_style.border_width_right = 2
+	power_style.border_width_top = 2
+	power_style.border_width_bottom = 2
+	power_style.border_color = COLOR_NEON_ORANGE
+	power_style.content_margin_left = 12
+	power_style.content_margin_right = 12
+	power_style.content_margin_top = 6
+	power_style.content_margin_bottom = 6
+	power_panel.add_theme_stylebox_override("panel", power_style)
+	# Insérer avant currency_panel (à gauche)
+	header_hbox.add_child(power_panel)
+	header_hbox.move_child(power_panel, header_hbox.get_child_count() - 2)
+	
+	power_label = Label.new()
+	power_label.name = "PowerLabel"
+	power_label.text = "PWR 0"
+	power_label.add_theme_font_size_override("font_size", CURRENCY_FONT_SIZE)
+	power_label.add_theme_color_override("font_color", COLOR_NEON_ORANGE)
+	power_panel.add_child(power_label)
 
 
 # =============================================================================
@@ -724,8 +797,7 @@ func _create_inventory_section(parent: Control) -> void:
 	var section := VBoxContainer.new()
 	section.name = "InventorySection"
 	section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	section.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	section.add_theme_constant_override("separation", 12)
+	section.add_theme_constant_override("separation", 20)
 	parent.add_child(section)
 	
 	# Titre
@@ -739,69 +811,178 @@ func _create_inventory_section(parent: Control) -> void:
 	title.add_theme_constant_override("outline_size", 2)
 	section.add_child(title)
 	
-	# Onglets centrés
-	var tabs_center := CenterContainer.new()
-	tabs_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	section.add_child(tabs_center)
-	
-	inventory_tabs_container = HBoxContainer.new()
-	inventory_tabs_container.name = "InventoryTabs"
-	inventory_tabs_container.add_theme_constant_override("separation", 8)
-	tabs_center.add_child(inventory_tabs_container)
-	
-	for tab_key in EQUIPMENT_DATA.keys():
-		var tab_data = EQUIPMENT_DATA[tab_key]
-		var tab_btn := Button.new()
-		tab_btn.name = "Tab_" + tab_key
-		tab_btn.text = tab_data["title"]
-		tab_btn.custom_minimum_size = Vector2(90, 40)
-		tab_btn.add_theme_font_size_override("font_size", TAB_FONT_SIZE)
-		tab_btn.pressed.connect(_on_inventory_tab_pressed.bind(tab_key))
-		inventory_tabs_container.add_child(tab_btn)
-		inventory_tab_buttons[tab_key] = tab_btn
-	
-	_update_inventory_tab_styles()
-	
-	# Grille centrée
-	var grid_center := CenterContainer.new()
-	grid_center.name = "InventoryGridCenter"
-	grid_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	section.add_child(grid_center)
-	
-	inventory_grid = GridContainer.new()
-	inventory_grid.name = "InventoryGrid"
-	inventory_grid.columns = 3
-	inventory_grid.add_theme_constant_override("h_separation", ITEM_SPACING)
-	inventory_grid.add_theme_constant_override("v_separation", ITEM_SPACING)
-	grid_center.add_child(inventory_grid)
+	# Container principal pour les catégories
+	inventory_container = VBoxContainer.new()
+	inventory_container.name = "InventoryContainer"
+	inventory_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_container.add_theme_constant_override("separation", 18)
+	section.add_child(inventory_container)
 
 
 func _populate_inventory() -> void:
-	for child in inventory_grid.get_children():
+	# Nettoyer
+	for child in inventory_container.get_children():
 		child.queue_free()
-	
-	var tab_data = EQUIPMENT_DATA[current_inventory_tab]
-	var items = tab_data["items"]
+	inventory_scroll_containers.clear()
 	
 	var available_width := viewport_size.x - (MARGIN_HORIZONTAL * 2)
 	var card_width := (available_width - (ITEM_SPACING * 2)) / 3.0
 	
-	for item_data in items:
-		var owned := false
-		var equipped := false
-		if SaveManager:
-			owned = SaveManager.owns_equipment(item_data["id"])
-			var equipped_id := SaveManager.get_equipped(current_inventory_tab)
-			equipped = (item_data["id"] == equipped_id)
+	# Parcourir chaque catégorie (weapon, armor, helmet)
+	for category_key in ["weapon", "armor", "helmet"]:
+		var category_data = EQUIPMENT_DATA[category_key]
+		var category_color: Color = EQUIP_COLORS.get(category_key, COLOR_NEON_CYAN)
 		
-		var card := _create_inventory_card(item_data, card_width, owned, equipped)
-		inventory_grid.add_child(card)
+		# Titre de la catégorie
+		var category_title := Label.new()
+		category_title.text = category_data["title"]
+		category_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		category_title.add_theme_font_size_override("font_size", 18)
+		category_title.add_theme_color_override("font_color", category_color)
+		category_title.add_theme_color_override("font_outline_color", Color(category_color.r * 0.5, category_color.g * 0.5, category_color.b * 0.5, 0.6))
+		category_title.add_theme_constant_override("outline_size", 2)
+		inventory_container.add_child(category_title)
+		
+		# Récupérer les items possédés pour cette catégorie
+		var owned_items: Array = []
+		for item_data in category_data["items"]:
+			if SaveManager and SaveManager.owns_equipment(item_data["id"]):
+				owned_items.append(item_data)
+		
+		# Mettre en cache
+		owned_items_cache[category_key] = owned_items
+		
+		# Si aucun item possédé, afficher "No weapon/armor/helmet"
+		if owned_items.is_empty():
+			var no_item_label := Label.new()
+			var category_name := ""
+			match category_key:
+				"weapon": category_name = "weapon"
+				"armor": category_name = "armor"
+				"helmet": category_name = "helmet"
+			no_item_label.text = "No %s" % category_name
+			no_item_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			no_item_label.add_theme_font_size_override("font_size", 14)
+			no_item_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
+			inventory_container.add_child(no_item_label)
+		else:
+			# Container vertical pour scroll + barre
+			var scroll_section := VBoxContainer.new()
+			scroll_section.add_theme_constant_override("separation", 4)
+			inventory_container.add_child(scroll_section)
+			
+			# ScrollContainer horizontal avec scrollbar cachée
+			var scroll_container := ScrollContainer.new()
+			scroll_container.name = "ScrollContainer_%s" % category_key
+			scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+			scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			scroll_container.custom_minimum_size = Vector2(available_width, card_width * 1.3)
+			scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			scroll_container.follow_focus = false  # Évite le scroll automatique
+			scroll_section.add_child(scroll_container)
+			
+			# HBoxContainer pour les items
+			var items_hbox := HBoxContainer.new()
+			items_hbox.name = "ItemsContainer_%s" % category_key
+			items_hbox.add_theme_constant_override("separation", ITEM_SPACING)
+			scroll_container.add_child(items_hbox)
+			
+			# Créer tous les items
+			for item_data in owned_items:
+				var equipped := false
+				if SaveManager:
+					var equipped_id := SaveManager.get_equipped(category_key)
+					equipped = (item_data["id"] == equipped_id)
+				
+				var card := _create_inventory_card_horizontal(item_data, card_width, equipped, category_key, category_color)
+				items_hbox.add_child(card)
+			
+			# Barre de scroll personnalisée (visible si plus de 3 items)
+			if owned_items.size() > 3:
+				var scrollbar_container := _create_custom_scrollbar(scroll_container, category_color, available_width)
+				scroll_section.add_child(scrollbar_container)
+			
+			# Stocker la référence
+			inventory_scroll_containers[category_key] = scroll_container
 
 
-func _create_inventory_card(item_data: Dictionary, card_width: float, owned: bool, equipped: bool) -> Control:
-	var slot_color: Color = EQUIP_COLORS.get(current_inventory_tab, COLOR_NEON_CYAN)
+func _create_custom_scrollbar(scroll_container: ScrollContainer, color: Color, available_width: float) -> Control:
+	# Container pour la barre de scroll
+	var bar_bg := PanelContainer.new()
+	bar_bg.custom_minimum_size = Vector2(available_width, 8)
 	
+	# Style fond de la barre
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.15, 0.15, 0.2, 0.6)
+	bg_style.corner_radius_top_left = 4
+	bg_style.corner_radius_top_right = 4
+	bg_style.corner_radius_bottom_left = 4
+	bg_style.corner_radius_bottom_right = 4
+	bar_bg.add_theme_stylebox_override("panel", bg_style)
+	
+	# Thumb (indicateur de position)
+	var thumb := Panel.new()
+	thumb.name = "ScrollThumb"
+	bar_bg.add_child(thumb)
+	
+	# Style du thumb
+	var thumb_style := StyleBoxFlat.new()
+	thumb_style.bg_color = color
+	thumb_style.corner_radius_top_left = 4
+	thumb_style.corner_radius_top_right = 4
+	thumb_style.corner_radius_bottom_left = 4
+	thumb_style.corner_radius_bottom_right = 4
+	thumb.add_theme_stylebox_override("panel", thumb_style)
+	
+	# Mettre à jour la position du thumb quand on scroll
+	scroll_container.get_h_scroll_bar().value_changed.connect(
+		func(_value: float) -> void:
+			_update_scrollbar_thumb(scroll_container, thumb, available_width)
+	)
+	
+	# Initialiser la taille du thumb
+	scroll_container.ready.connect(
+		func() -> void:
+			await get_tree().process_frame
+			_update_scrollbar_thumb(scroll_container, thumb, available_width)
+	)
+	
+	return bar_bg
+
+
+func _update_scrollbar_thumb(scroll_container: ScrollContainer, thumb: Panel, bar_width: float) -> void:
+	if not is_instance_valid(thumb) or not is_instance_valid(scroll_container):
+		return
+	
+	var h_scroll := scroll_container.get_h_scroll_bar()
+	var max_scroll := h_scroll.max_value - h_scroll.page
+	
+	# Calculer la taille du thumb proportionnellement
+	var content_width := 0.0
+	for child in scroll_container.get_children():
+		content_width = child.size.x
+		break
+	
+	if content_width <= 0:
+		content_width = bar_width
+	
+	var visible_ratio := minf(1.0, scroll_container.size.x / content_width)
+	var thumb_width := maxf(40.0, bar_width * visible_ratio)  # Minimum 40px
+	
+	# Calculer la position du thumb
+	var scroll_ratio := 0.0
+	if max_scroll > 0:
+		scroll_ratio = h_scroll.value / max_scroll
+	
+	var max_thumb_pos := bar_width - thumb_width
+	var thumb_pos := scroll_ratio * max_thumb_pos
+	
+	# Appliquer
+	thumb.position = Vector2(thumb_pos, 0)
+	thumb.size = Vector2(thumb_width, 8)
+
+
+func _create_inventory_card_horizontal(item_data: Dictionary, card_width: float, equipped: bool, _slot: String, slot_color: Color) -> Control:
 	var card := PanelContainer.new()
 	card.name = "InventoryCard_%s" % item_data["id"]
 	card.custom_minimum_size = Vector2(card_width, card_width * 1.2)
@@ -810,12 +991,9 @@ func _create_inventory_card(item_data: Dictionary, card_width: float, owned: boo
 	if equipped:
 		card_style.bg_color = Color(slot_color.r * 0.2, slot_color.g * 0.2, slot_color.b * 0.2, 0.95)
 		card_style.border_color = COLOR_NEON_GREEN
-	elif owned:
+	else:
 		card_style.bg_color = COLOR_PANEL_BG
 		card_style.border_color = slot_color
-	else:
-		card_style.bg_color = Color(0.02, 0.02, 0.05, 0.8)
-		card_style.border_color = Color(0.3, 0.3, 0.3)
 	
 	card_style.corner_radius_top_left = 10
 	card_style.corner_radius_top_right = 10
@@ -851,8 +1029,6 @@ func _create_inventory_card(item_data: Dictionary, card_width: float, owned: boo
 	var tex = load(item_data["image"])
 	if tex:
 		image.texture = tex
-	if not owned:
-		image.modulate = Color(0.3, 0.3, 0.3, 0.6)
 	image_container.add_child(image)
 	
 	# Nom
@@ -860,10 +1036,7 @@ func _create_inventory_card(item_data: Dictionary, card_width: float, owned: boo
 	name_label.text = item_data["name"]
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", ITEM_NAME_SIZE)
-	if owned:
-		name_label.add_theme_color_override("font_color", COLOR_WHITE_GLOW)
-	else:
-		name_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	name_label.add_theme_color_override("font_color", COLOR_WHITE_GLOW)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	vbox.add_child(name_label)
 	
@@ -872,10 +1045,7 @@ func _create_inventory_card(item_data: Dictionary, card_width: float, owned: boo
 	bonus_label.text = item_data["bonus"]
 	bonus_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bonus_label.add_theme_font_size_override("font_size", ITEM_BONUS_SIZE)
-	if owned:
-		bonus_label.add_theme_color_override("font_color", COLOR_NEON_GREEN)
-	else:
-		bonus_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+	bonus_label.add_theme_color_override("font_color", COLOR_NEON_GREEN)
 	vbox.add_child(bonus_label)
 	
 	# Statut / Bouton équiper
@@ -886,36 +1056,17 @@ func _create_inventory_card(item_data: Dictionary, card_width: float, owned: boo
 		status.add_theme_font_size_override("font_size", 11)
 		status.add_theme_color_override("font_color", COLOR_NEON_GREEN)
 		vbox.add_child(status)
-	elif owned:
+	else:
 		var equip_btn := Button.new()
 		equip_btn.text = "ÉQUIPER"
 		equip_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		equip_btn.custom_minimum_size.y = 28
 		equip_btn.add_theme_font_size_override("font_size", 11)
 		_style_button_neon(equip_btn, slot_color)
-		equip_btn.pressed.connect(_on_equip_item.bind(current_inventory_tab, item_data["id"]))
+		equip_btn.pressed.connect(_on_equip_item.bind(_slot, item_data["id"]))
 		vbox.add_child(equip_btn)
-	else:
-		var locked := Label.new()
-		locked.text = "🔒 SHOP"
-		locked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		locked.add_theme_font_size_override("font_size", 11)
-		locked.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-		vbox.add_child(locked)
 	
 	return card
-
-
-func _update_inventory_tab_styles() -> void:
-	for tab_key in inventory_tab_buttons.keys():
-		var btn: Button = inventory_tab_buttons[tab_key]
-		var is_active: bool = (tab_key == current_inventory_tab)
-		var tab_color: Color = EQUIP_COLORS.get(tab_key, COLOR_NEON_CYAN)
-		
-		if is_active:
-			_style_button_neon(btn, tab_color, true)
-		else:
-			_style_button_neon(btn, COLOR_TAB_INACTIVE, false)
 
 
 # =============================================================================
@@ -976,22 +1127,45 @@ func _style_button_neon(btn: Button, color: Color, filled: bool = false) -> void
 
 
 func _show_feedback(message: String, success: bool) -> void:
+	# Créer un label de feedback temporaire au centre de l'écran
 	var feedback := Label.new()
 	feedback.text = message
 	feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	feedback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	feedback.add_theme_font_size_override("font_size", 18)
-	feedback.add_theme_color_override("font_color", COLOR_SUCCESS if success else COLOR_ERROR)
-	feedback.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	feedback.add_theme_constant_override("outline_size", 3)
+	feedback.add_theme_font_size_override("font_size", 28)
 	
-	feedback.set_anchors_preset(Control.PRESET_CENTER)
-	feedback.position.y += viewport_size.y * 0.2
+	# Couleur verte si succès, rouge si erreur
+	var text_color := Color("#33FF88") if success else Color("#FF4444")
+	feedback.add_theme_color_override("font_color", text_color)
+	
+	# Contour blanc épais pour la lisibilité
+	feedback.add_theme_color_override("font_outline_color", Color.WHITE)
+	feedback.add_theme_constant_override("outline_size", 6)
+	
+	# Ombre noire en plus pour encore plus de contraste
+	feedback.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	feedback.add_theme_constant_override("shadow_offset_x", 2)
+	feedback.add_theme_constant_override("shadow_offset_y", 2)
+	
+	# Centrer parfaitement à l'écran
+	feedback.anchors_preset = Control.PRESET_CENTER
+	feedback.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	feedback.grow_vertical = Control.GROW_DIRECTION_BOTH
+	feedback.z_index = 100  # Au-dessus de tout
 	add_child(feedback)
 	
+	# Centrer horizontalement, positionner à 25% du haut (75% vers le haut)
+	await get_tree().process_frame
+	var screen_size := get_viewport().get_visible_rect().size
+	feedback.position.x = (screen_size.x - feedback.size.x) / 2
+	feedback.position.y = screen_size.y * 0.25 - feedback.size.y / 2
+	
+	# Animation: apparition puis fondu après 1 seconde
+	feedback.modulate.a = 0.0
 	var tween := create_tween()
-	tween.tween_property(feedback, "position:y", feedback.position.y - 40, 0.4)
-	tween.parallel().tween_property(feedback, "modulate:a", 0.0, 0.4).set_delay(0.8)
+	tween.tween_property(feedback, "modulate:a", 1.0, 0.15)  # Apparition rapide
+	tween.tween_interval(1.0)  # Reste visible 1 seconde
+	tween.tween_property(feedback, "modulate:a", 0.0, 0.3)  # Fondu de sortie
 	tween.tween_callback(feedback.queue_free)
 
 
@@ -1015,19 +1189,6 @@ func _on_back_pressed() -> void:
 	)
 
 
-func _on_inventory_tab_pressed(tab_key: String) -> void:
-	if tab_key == current_inventory_tab:
-		return
-	
-	current_inventory_tab = tab_key
-	_update_inventory_tab_styles()
-	
-	var tween := create_tween()
-	tween.tween_property(inventory_grid, "modulate:a", 0.0, 0.1)
-	tween.tween_callback(_populate_inventory)
-	tween.tween_property(inventory_grid, "modulate:a", 1.0, 0.15)
-
-
 func _on_upgrade_stat(stat_id: String) -> void:
 	if not SaveManager:
 		return
@@ -1042,6 +1203,7 @@ func _on_upgrade_stat(stat_id: String) -> void:
 	if SaveManager.spend_currency(cost):
 		SaveManager.increase_upgrade(stat_id)
 		_populate_stats_grid()
+		_update_power_display()
 		_show_feedback("+1 %s!" % config["name"], true)
 
 
@@ -1052,6 +1214,7 @@ func _on_equip_item(slot: String, item_id: String) -> void:
 	SaveManager.equip_item(slot, item_id)
 	_populate_equipped_cards()
 	_populate_inventory()
+	_update_power_display()
 	
 	var item_name := ""
 	for item in EQUIPMENT_DATA[slot]["items"]:
@@ -1068,8 +1231,42 @@ func _update_currency_display() -> void:
 		currency_label.text = str(coins) + " SC"
 
 
+func _update_power_display() -> void:
+	if power_label and SaveManager:
+		var power := _calculate_player_power()
+		power_label.text = "PWR %d" % power
+
+
+func _calculate_player_power() -> int:
+	if not SaveManager:
+		return 100  # Valeur de base
+	
+	var power := 100  # Base de 100
+	
+	# Bonus des upgrades
+	for upgrade_id in UPGRADES_CONFIG:
+		var level := SaveManager.get_upgrade_level(upgrade_id)
+		var per_level: int = int(UPGRADES_CONFIG[upgrade_id]["per_level"] * 0.8)
+		power += level * per_level
+	
+	# Bonus des équipements équipés
+	for slot in ["weapon", "armor", "helmet"]:
+		var equipped := SaveManager.get_equipped(slot)
+		if equipped != "":
+			# Trouver l'équipement dans EQUIPMENT_DATA
+			var slot_data = EQUIPMENT_DATA.get(slot, {})
+			var items = slot_data.get("items", [])
+			for item in items:
+				if item["id"] == equipped:
+					power += item["bonus_value"]
+					break
+	
+	return power
+
+
 func _on_currency_changed(_new_amount: int) -> void:
 	_update_currency_display()
+	_update_power_display()
 	_populate_stats_grid()
 
 

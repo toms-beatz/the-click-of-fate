@@ -40,8 +40,6 @@ const NAV_BUTTON_FONT_SIZE := 18
 @onready var currency_label: Label = %CurrencyLabel
 @onready var power_label: Label = %PowerLabel
 @onready var carousel_container: Control = %CarouselContainer
-@onready var left_arrow: Button = %LeftArrow
-@onready var right_arrow: Button = %RightArrow
 @onready var planet_name_label: Label = %PlanetNameLabel
 @onready var planet_desc_label: Label = %PlanetDescLabel
 @onready var recommended_power_label: Label = %RecommendedPowerLabel
@@ -185,8 +183,6 @@ func _calculate_planet_sizes() -> void:
 
 
 func _connect_signals() -> void:
-	left_arrow.pressed.connect(_on_left_pressed)
-	right_arrow.pressed.connect(_on_right_pressed)
 	play_button.pressed.connect(_on_play_pressed)
 	home_button.pressed.connect(_on_home_pressed)
 	shop_button.pressed.connect(_on_shop_pressed)
@@ -202,10 +198,6 @@ func _connect_signals() -> void:
 
 ## Applique le style néon à tous les boutons
 func _style_all_buttons() -> void:
-	# Boutons de navigation (flèches)
-	_style_button_neon(left_arrow, COLOR_NEON_CYAN)
-	_style_button_neon(right_arrow, COLOR_NEON_CYAN)
-	
 	# Bouton PLAY principal
 	_style_button_neon(play_button, COLOR_NEON_GREEN, true)
 	play_button.text = "PLAY"
@@ -397,6 +389,7 @@ func _calculate_player_power() -> int:
 	
 	# Bonus des équipements
 	var equipment_data := {
+		# Shop equipment
 		"sword_basic": {"attack_power": 5},
 		"sword_flame": {"attack_power": 12},
 		"sword_cosmic": {"attack_power": 25},
@@ -406,6 +399,42 @@ func _calculate_player_power() -> int:
 		"helmet_basic": {"heal_power": 3},
 		"helmet_nature": {"heal_power": 8},
 		"helmet_cosmic": {"heal_power": 15},
+		# Gacha Common weapons
+		"sword_iron": {"attack_power": 3},
+		"sword_steel": {"attack_power": 4},
+		"sword_bronze": {"attack_power": 5},
+		# Gacha Rare weapons
+		"sword_crystal": {"attack_power": 8},
+		"sword_thunder": {"attack_power": 10},
+		"sword_frost": {"attack_power": 12},
+		# Gacha Legendary weapons
+		"sword_dragon": {"attack_power": 18},
+		"sword_void": {"attack_power": 22},
+		"sword_divine": {"attack_power": 28},
+		# Gacha Common armors
+		"armor_leather": {"dodge_chance": 3},
+		"armor_chainmail": {"dodge_chance": 4},
+		"armor_iron": {"dodge_chance": 5},
+		# Gacha Rare armors
+		"armor_crystal": {"dodge_chance": 8},
+		"armor_thunder": {"dodge_chance": 10},
+		"armor_frost": {"dodge_chance": 12},
+		# Gacha Legendary armors
+		"armor_dragon": {"dodge_chance": 16},
+		"armor_void": {"dodge_chance": 20},
+		"armor_divine": {"dodge_chance": 25},
+		# Gacha Common helmets
+		"helmet_leather": {"heal_power": 2},
+		"helmet_iron": {"heal_power": 3},
+		"helmet_steel": {"heal_power": 4},
+		# Gacha Rare helmets
+		"helmet_crystal": {"heal_power": 6},
+		"helmet_thunder": {"heal_power": 8},
+		"helmet_frost": {"heal_power": 10},
+		# Gacha Legendary helmets
+		"helmet_dragon": {"heal_power": 14},
+		"helmet_void": {"heal_power": 18},
+		"helmet_divine": {"heal_power": 22},
 	}
 	for slot in ["weapon", "armor", "helmet"]:
 		var equipped := SaveManager.get_equipped(slot)
@@ -449,6 +478,9 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 	container.name = "Planet_%d" % index
 	container.custom_minimum_size = Vector2(planet_size_center, planet_size_center)
 	container.size = Vector2(planet_size_center, planet_size_center)
+	
+	# Animation de flottement
+	_animate_planet_float(container, randf_range(0.0, 2.0))
 	
 	# Anneau extérieur (glow) - pas nécessaire avec les vrais sprites
 	var ring := Control.new()
@@ -624,37 +656,12 @@ func _update_planet_info_display() -> void:
 		else:
 			play_button.text = "PLAY"
 			_style_button_neon(play_button, COLOR_NEON_GREEN, true)
-	
-	# Flèches de navigation
-	if left_arrow:
-		left_arrow.disabled = current_index <= 0
-		left_arrow.modulate.a = 1.0 if current_index > 0 else 0.3
-	
-	if right_arrow:
-		right_arrow.disabled = current_index >= PLANETS_INFO.size() - 1
-		right_arrow.modulate.a = 1.0 if current_index < PLANETS_INFO.size() - 1 else 0.3
 
 
 func _get_highest_completed() -> int:
 	if SaveManager:
 		return SaveManager.get_highest_planet_completed()
 	return -1
-
-
-func _on_left_pressed() -> void:
-	if current_index > 0:
-		current_index -= 1
-		_update_carousel_positions(true)
-		_update_planet_info_display()
-		_animate_button(left_arrow)
-
-
-func _on_right_pressed() -> void:
-	if current_index < PLANETS_INFO.size() - 1:
-		current_index += 1
-		_update_carousel_positions(true)
-		_update_planet_info_display()
-		_animate_button(right_arrow)
 
 
 func _on_play_pressed() -> void:
@@ -871,3 +878,36 @@ func _cleanup_spaceships() -> void:
 		active_spaceships.erase(spaceship)
 		if is_instance_valid(spaceship):
 			spaceship.queue_free()
+
+
+# =============================================================================
+# ANIMATIONS DES PLANÈTES - EFFET SPATIAL
+# =============================================================================
+
+## Animation de flottement pour les planètes
+func _animate_planet_float(planet: Control, delay: float) -> void:
+	var tween := create_tween()
+	tween.set_loops()
+	
+	# Délai initial pour désynchroniser
+	if delay > 0:
+		tween.tween_interval(delay)
+	
+	# Mouvement vertical doux
+	var float_distance := randf_range(8.0, 15.0)
+	var float_duration := randf_range(3.0, 5.0)
+	var original_y := planet.position.y
+	
+	tween.tween_property(planet, "position:y", original_y + float_distance, float_duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(planet, "position:y", original_y, float_duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	
+	# Rotation très légère
+	var rotate_tween := create_tween()
+	rotate_tween.set_loops()
+	if delay > 0:
+		rotate_tween.tween_interval(delay * 0.6)
+	var rotate_angle := randf_range(-2.0, 2.0)
+	var rotate_duration := randf_range(6.0, 9.0)
+	rotate_tween.tween_property(planet, "rotation_degrees", rotate_angle, rotate_duration).set_ease(Tween.EASE_IN_OUT)
+	rotate_tween.tween_property(planet, "rotation_degrees", -rotate_angle, rotate_duration).set_ease(Tween.EASE_IN_OUT)
+	rotate_tween.tween_property(planet, "rotation_degrees", 0, rotate_duration).set_ease(Tween.EASE_IN_OUT)
