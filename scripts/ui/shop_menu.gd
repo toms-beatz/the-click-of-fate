@@ -354,20 +354,23 @@ func _populate_packs() -> void:
 	for child in packs_grid.get_children():
 		child.queue_free()
 	
-	# Calculer taille des cartes (50% de la largeur disponible - spacing)
+	# Calculer taille des cartes - largeur disponible divisée par 2 (grille 2x2)
 	var available_width := viewport_size.x - (MARGIN_HORIZONTAL * 2)
-	var card_size := (available_width - ITEM_SPACING) / 2.0 - 8
-	card_size = min(card_size, 180)  # Max size
+	var card_width := (available_width - ITEM_SPACING) / 2.0
+	# Limiter la hauteur à un pourcentage de l'écran pour garder les proportions
+	var max_height := viewport_size.y * 0.25
 	
 	for pack_data in COIN_PACKS:
-		var card := _create_pack_card(pack_data, card_size)
+		var card := _create_pack_card(pack_data, card_width, max_height)
 		packs_grid.add_child(card)
 
 
-func _create_pack_card(pack_data: Dictionary, card_size: float) -> Control:
-	# Panel de la carte
+func _create_pack_card(pack_data: Dictionary, card_width: float, max_height: float) -> Control:
+	# Panel de la carte avec largeur fixe et hauteur limitée
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(card_size, card_size + 50)
+	var card_height := minf(card_width * 1.2, max_height)  # Ratio 1:1.2 mais limité
+	card.custom_minimum_size = Vector2(card_width, card_height)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = COLOR_PANEL_BG
@@ -400,7 +403,7 @@ func _create_pack_card(pack_data: Dictionary, card_size: float) -> Control:
 	vbox.add_child(image_container)
 	
 	var image := TextureRect.new()
-	image.custom_minimum_size = Vector2(card_size * 0.6, card_size * 0.5)
+	image.custom_minimum_size = Vector2(card_width * 0.6, card_width * 0.5)
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var tex = load(pack_data["image"])
@@ -508,20 +511,23 @@ func _populate_equipment() -> void:
 	var tab_data = EQUIPMENT_DATA[current_tab]
 	var items = tab_data["items"]
 	
-	# Calculer taille des cartes (33% de la largeur - spacing)
+	# Calculer taille des cartes - largeur disponible divisée par 3 (grille 3xN)
 	var available_width := viewport_size.x - (MARGIN_HORIZONTAL * 2)
-	var card_size := (available_width - (ITEM_SPACING * 2)) / 3.0 - 4
-	card_size = min(card_size, 120)
+	var card_width := (available_width - (ITEM_SPACING * 2)) / 3.0
+	# Limiter la hauteur à un pourcentage de l'écran
+	var max_height := viewport_size.y * 0.22
 	
 	for item_data in items:
-		var card := _create_equipment_card(item_data, card_size)
+		var card := _create_equipment_card(item_data, card_width, max_height)
 		equipment_grid.add_child(card)
 
 
-func _create_equipment_card(item_data: Dictionary, card_size: float) -> Control:
-	# Panel carte
+func _create_equipment_card(item_data: Dictionary, card_width: float, max_height: float) -> Control:
+	# Panel carte avec largeur fixe et hauteur limitée
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(card_size, card_size + 70)
+	var card_height := minf(card_width * 1.3, max_height)  # Ratio 1:1.3 mais limité
+	card.custom_minimum_size = Vector2(card_width, card_height)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = COLOR_PANEL_BG
@@ -554,7 +560,7 @@ func _create_equipment_card(item_data: Dictionary, card_size: float) -> Control:
 	vbox.add_child(image_container)
 	
 	var image := TextureRect.new()
-	var img_size := card_size * 1
+	var img_size := card_width * 0.7
 	image.custom_minimum_size = Vector2(img_size, img_size)
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

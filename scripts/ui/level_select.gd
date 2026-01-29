@@ -98,6 +98,17 @@ const PLANETS_INFO := [
 		"difficulty": 4,
 		"recommended_power": 270,
 		"sprite": "res://assets/sprites/planets/earth.png"
+	},
+	{
+		"id": "coming_soon",
+		"name": "Coming Soon...",
+		"description": "New adventures await!",
+		"color": Color(0.15, 0.15, 0.15),
+		"bg_color": Color(0.05, 0.05, 0.05),
+		"difficulty": 0,
+		"recommended_power": 0,
+		"sprite": "res://assets/sprites/planets/planet-coming-soon.png",
+		"is_coming_soon": true
 	}
 ]
 
@@ -430,7 +441,8 @@ func _create_planet_carousel() -> void:
 
 func _create_planet_node(index: int, highest_completed: int) -> Control:
 	var info: Dictionary = PLANETS_INFO[index]
-	var is_unlocked: bool = index <= highest_completed + 1
+	var is_coming_soon: bool = info.get("is_coming_soon", false)
+	var is_unlocked: bool = not is_coming_soon and index <= highest_completed + 1
 	
 	# Container principal
 	var container := Control.new()
@@ -463,7 +475,7 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		planet_sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		planet_sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
 		
-		if not is_unlocked:
+		if not is_unlocked and not is_coming_soon:
 			planet_sprite.modulate = Color(0.4, 0.4, 0.4)  # Grisé
 		
 		container.add_child(planet_sprite)
@@ -481,10 +493,8 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		
 		container.add_child(planet_visual)
 	
-	# Plus de tick de complétion
-	
-	# Cadenas + planète assombrie si verrouillée
-	if not is_unlocked:
+	# Cadenas + planète assombrie si verrouillée (pas pour Coming Soon)
+	if not is_unlocked and not is_coming_soon:
 		# Ajoute un cadenas centré (icône texte)
 		var lock_container := Control.new()
 		lock_container.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -500,11 +510,11 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 		lock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lock_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 		lock_container.add_child(lock_label)
-		# Assombrit la planète (sprite ou colorrect déjà grisé plus haut)
 	
 	# Stocker les métadonnées
 	container.set_meta("planet_index", index)
 	container.set_meta("is_unlocked", is_unlocked)
+	container.set_meta("is_coming_soon", is_coming_soon)
 	
 	return container
 
@@ -550,7 +560,8 @@ func _update_carousel_positions(animate: bool = true) -> void:
 
 func _update_planet_info_display() -> void:
 	var info: Dictionary = PLANETS_INFO[current_index]
-	var is_unlocked: bool = current_index <= _get_highest_completed() + 1
+	var is_coming_soon: bool = info.get("is_coming_soon", false)
+	var is_unlocked: bool = not is_coming_soon and current_index <= _get_highest_completed() + 1
 	var is_completed: bool = current_index <= _get_highest_completed()
 	var player_power := _calculate_player_power()
 	var recommended: int = info["recommended_power"]
@@ -558,21 +569,40 @@ func _update_planet_info_display() -> void:
 	# Nom et description
 	if planet_name_label:
 		planet_name_label.text = info["name"]
-		planet_name_label.add_theme_color_override("font_color", COLOR_WHITE_GLOW)
-		planet_name_label.add_theme_color_override("font_outline_color", info["color"])
+		if is_coming_soon:
+			planet_name_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+			planet_name_label.add_theme_color_override("font_outline_color", Color(0.2, 0.2, 0.2))
+		else:
+			planet_name_label.add_theme_color_override("font_color", COLOR_WHITE_GLOW)
+			planet_name_label.add_theme_color_override("font_outline_color", info["color"])
 		planet_name_label.add_theme_constant_override("outline_size", 3)
 	
 	if planet_desc_label:
-		planet_desc_label.text = info["description"] if is_unlocked else "Locked Planet"
+		if is_coming_soon:
+			planet_desc_label.text = info["description"]
+			planet_desc_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+		elif is_unlocked:
+			planet_desc_label.text = info["description"]
+			planet_desc_label.remove_theme_color_override("font_color")
+		else:
+			planet_desc_label.text = "Locked Planet"
+			planet_desc_label.remove_theme_color_override("font_color")
 	
-	# Difficulté
+	# Difficulté (cacher pour Coming Soon)
 	if difficulty_label:
-		difficulty_label.text = "★".repeat(info["difficulty"]) + "☆".repeat(4 - info["difficulty"])
-		difficulty_label.add_theme_color_override("font_color", COLOR_NEON_GOLD)
+		if is_coming_soon:
+			difficulty_label.text = "???"
+			difficulty_label.add_theme_color_override("font_color", Color(0.3, 0.3, 0.3))
+		else:
+			difficulty_label.text = "★".repeat(info["difficulty"]) + "☆".repeat(4 - info["difficulty"])
+			difficulty_label.add_theme_color_override("font_color", COLOR_NEON_GOLD)
 	
 	# Puissance recommandée avec couleur selon notre niveau
 	if recommended_power_label:
-		if is_unlocked:
+		if is_coming_soon:
+			recommended_power_label.text = "Stay tuned for updates!"
+			recommended_power_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+		elif is_unlocked:
 			recommended_power_label.text = "Recommended Power: %d" % recommended
 			if player_power >= recommended:
 				recommended_power_label.add_theme_color_override("font_color", COLOR_NEON_GREEN)
@@ -584,10 +614,10 @@ func _update_planet_info_display() -> void:
 			recommended_power_label.text = "Complete %s to unlock" % PLANETS_INFO[maxi(0, current_index - 1)]["name"]
 			recommended_power_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	
-	# Bouton jouer - PLAY ou REPLAY selon si complété (sans émojis)
+	# Bouton jouer - PLAY ou REPLAY selon si complété (cacher pour Coming Soon)
 	if play_button:
-		play_button.visible = is_unlocked
-		play_button.disabled = not is_unlocked
+		play_button.visible = is_unlocked and not is_coming_soon
+		play_button.disabled = not is_unlocked or is_coming_soon
 		if is_completed:
 			play_button.text = "REPLAY"
 			_style_button_neon(play_button, COLOR_NEON_CYAN, true)

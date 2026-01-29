@@ -2033,7 +2033,9 @@ func _on_victory() -> void:
 	SaveManager.add_currency(VICTORY_BONUS)
 	
 	# Sauvegarder la progression - planète complétée!
-	# Note: Les coins sont déjà sauvés, pas besoin de restore
+	# Appeler advance_planet immédiatement pour débloquer la planète suivante
+	# (peu importe si le joueur clique ensuite sur "Menu" ou "Next Planet")
+	SaveManager.advance_planet()
 	
 	# Afficher l'écran de victoire
 	await get_tree().create_timer(1.0).timeout
