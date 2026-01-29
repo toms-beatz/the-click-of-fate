@@ -4,6 +4,7 @@
 ## - Défilement gauche/droite par swipe ou boutons
 ## - Planètes verrouillées grisées avec cadenas
 ## - Puissance recommandée par planète
+## - Style Sci-Fi Néon unifié avec le reste du jeu
 ##
 ## Progression LINÉAIRE: Mercure → Vénus → Mars → Terre
 extends Control
@@ -11,6 +12,29 @@ extends Control
 
 ## Émis quand une planète est sélectionnée
 signal planet_selected(planet_index: int)
+
+# =============================================================================
+# CONSTANTES DE DESIGN - Style unifié Sci-Fi Néon
+# =============================================================================
+
+## Couleurs Sci-Fi Néon (identiques à shop_menu)
+const COLOR_BLACK_DEEP := Color("#0A0A0F")
+const COLOR_BLUE_NIGHT := Color("#0D1B2A")
+const COLOR_NEON_CYAN := Color("#00D4FF")
+const COLOR_NEON_PINK := Color("#FF3388")
+const COLOR_NEON_GREEN := Color("#33FF88")
+const COLOR_NEON_GOLD := Color("#FFD933")
+const COLOR_NEON_PURPLE := Color("#AA44FF")
+const COLOR_NEON_ORANGE := Color("#FF8833")
+const COLOR_WHITE_GLOW := Color("#FFFFFF")
+const COLOR_PANEL_BG := Color(0.03, 0.03, 0.12, 0.92)
+
+## Tailles de police
+const HEADER_FONT_SIZE := 32
+const CURRENCY_FONT_SIZE := 20
+const POWER_FONT_SIZE := 20
+const BUTTON_FONT_SIZE := 20
+const NAV_BUTTON_FONT_SIZE := 18
 
 ## Références UI
 @onready var currency_label: Label = %CurrencyLabel
@@ -124,6 +148,7 @@ var spaceship_timer: float = 0.0
 
 func _ready() -> void:
 	_connect_signals()
+	_style_all_buttons()
 	_update_displays()
 	_create_background()
 	# Attendre que le carousel_container ait sa taille
@@ -160,11 +185,135 @@ func _connect_signals() -> void:
 		SaveManager.currency_changed.connect(_on_currency_changed)
 
 
+# =============================================================================
+# STYLING DES BOUTONS - Style Néon unifié
+# =============================================================================
+
+## Applique le style néon à tous les boutons
+func _style_all_buttons() -> void:
+	# Boutons de navigation (flèches)
+	_style_button_neon(left_arrow, COLOR_NEON_CYAN)
+	_style_button_neon(right_arrow, COLOR_NEON_CYAN)
+	
+	# Bouton PLAY principal
+	_style_button_neon(play_button, COLOR_NEON_GREEN, true)
+	play_button.text = "PLAY"
+	
+	# Boutons de navigation bas (sans émojis)
+	_style_button_neon(home_button, COLOR_NEON_CYAN)
+	home_button.text = "HOME"
+	
+	_style_button_neon(shop_button, COLOR_NEON_GOLD)
+	shop_button.text = "SHOP"
+	
+	_style_button_neon(profile_button, COLOR_NEON_PURPLE)
+	profile_button.text = "PROFIL"
+
+
+## Applique un style néon à un bouton
+func _style_button_neon(btn: Button, color: Color, filled: bool = false) -> void:
+	var style := StyleBoxFlat.new()
+	
+	if filled:
+		style.bg_color = Color(color.r * 0.3, color.g * 0.3, color.b * 0.3, 0.9)
+	else:
+		style.bg_color = Color(0.05, 0.05, 0.12, 0.85)
+	
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = color
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	
+	btn.add_theme_stylebox_override("normal", style)
+	
+	# Hover
+	var hover_style := style.duplicate()
+	hover_style.bg_color = Color(color.r * 0.4, color.g * 0.4, color.b * 0.4, 0.95)
+	btn.add_theme_stylebox_override("hover", hover_style)
+	
+	# Pressed
+	var pressed_style := style.duplicate()
+	pressed_style.bg_color = Color(color.r * 0.5, color.g * 0.5, color.b * 0.5, 1.0)
+	btn.add_theme_stylebox_override("pressed", pressed_style)
+	
+	# Disabled
+	var disabled_style := style.duplicate()
+	disabled_style.bg_color = Color(0.1, 0.1, 0.1, 0.5)
+	disabled_style.border_color = Color(0.3, 0.3, 0.3, 0.5)
+	btn.add_theme_stylebox_override("disabled", disabled_style)
+	
+	# Couleurs de texte - toujours blanc
+	btn.add_theme_color_override("font_color", COLOR_WHITE_GLOW)
+	btn.add_theme_color_override("font_hover_color", COLOR_WHITE_GLOW)
+	btn.add_theme_color_override("font_pressed_color", COLOR_WHITE_GLOW)
+	btn.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5))
+
+
+## Style les panels de stats (puissance et coins)
+func _style_stats_panels() -> void:
+	# Style le label de puissance
+	if power_label:
+		var power_panel = power_label.get_parent()
+		if power_panel is PanelContainer:
+			var style := StyleBoxFlat.new()
+			style.bg_color = Color(0.05, 0.05, 0.15, 0.9)
+			style.corner_radius_top_left = 10
+			style.corner_radius_top_right = 10
+			style.corner_radius_bottom_left = 10
+			style.corner_radius_bottom_right = 10
+			style.border_width_left = 2
+			style.border_width_right = 2
+			style.border_width_top = 2
+			style.border_width_bottom = 2
+			style.border_color = COLOR_NEON_ORANGE
+			style.content_margin_left = 12
+			style.content_margin_right = 12
+			style.content_margin_top = 6
+			style.content_margin_bottom = 6
+			power_panel.add_theme_stylebox_override("panel", style)
+		
+		power_label.add_theme_font_size_override("font_size", POWER_FONT_SIZE)
+		power_label.add_theme_color_override("font_color", COLOR_NEON_ORANGE)
+	
+	# Style le label de monnaie
+	if currency_label:
+		var currency_panel = currency_label.get_parent()
+		if currency_panel is PanelContainer:
+			var style := StyleBoxFlat.new()
+			style.bg_color = Color(0.05, 0.05, 0.15, 0.9)
+			style.corner_radius_top_left = 10
+			style.corner_radius_top_right = 10
+			style.corner_radius_bottom_left = 10
+			style.corner_radius_bottom_right = 10
+			style.border_width_left = 2
+			style.border_width_right = 2
+			style.border_width_top = 2
+			style.border_width_bottom = 2
+			style.border_color = COLOR_NEON_GOLD
+			style.content_margin_left = 12
+			style.content_margin_right = 12
+			style.content_margin_top = 6
+			style.content_margin_bottom = 6
+			currency_panel.add_theme_stylebox_override("panel", style)
+		
+		currency_label.add_theme_font_size_override("font_size", CURRENCY_FONT_SIZE)
+		currency_label.add_theme_color_override("font_color", COLOR_NEON_GOLD)
+
+
 ## Crée et ajoute le background avec opacité - Layer séparé pour éviter les problèmes d'animation
 var background_layer: CanvasLayer
 var background_rect: TextureRect
 
-const BACKGROUND_PATH := "res://assets/sprites/background/background-menu-selection.png"
+const BACKGROUND_PATH := "res://assets/backgrounds/background-menu-selection.png"
 
 func _create_background() -> void:
 	# Utilise le TextureRect existant dans la scène
@@ -179,15 +328,14 @@ func _create_background() -> void:
 		push_warning("Background non trouvé: " + BACKGROUND_PATH)
 		return
 	bg_node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg_node.stretch_mode = TextureRect.STRETCH_SCALE
-	bg_node.modulate = Color(0.3, 0.3, 0.3, 1)
+	bg_node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bg_node.modulate = Color(0.5, 0.5, 0.5, 1)
 	bg_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg_node.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var viewport_size := get_viewport().get_visible_rect().size
-	bg_node.size = viewport_size
 
 
 func _update_displays() -> void:
+	_style_stats_panels()
 	_update_currency_display()
 	_update_power_display()
 
@@ -200,7 +348,7 @@ func _update_currency_display() -> void:
 func _update_power_display() -> void:
 	if power_label:
 		var power := _calculate_player_power()
-		power_label.text = "⚔ %d" % power
+		power_label.text = "PWR %d" % power
 
 
 func _on_currency_changed(_new_amount: int) -> void:
@@ -337,14 +485,17 @@ func _create_planet_node(index: int, highest_completed: int) -> Control:
 	
 	# Cadenas + planète assombrie si verrouillée
 	if not is_unlocked:
-		# Ajoute un cadenas centré
+		# Ajoute un cadenas centré (icône texte)
 		var lock_container := Control.new()
 		lock_container.set_anchors_preset(Control.PRESET_FULL_RECT)
 		container.add_child(lock_container)
 		var lock_label := Label.new()
 		lock_label.name = "Lock"
-		lock_label.text = "🔒"
-		lock_label.add_theme_font_size_override("font_size", int(planet_size_center * 0.35))
+		lock_label.text = "LOCKED"
+		lock_label.add_theme_font_size_override("font_size", int(planet_size_center * 0.12))
+		lock_label.add_theme_color_override("font_color", Color(0.8, 0.2, 0.2))
+		lock_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+		lock_label.add_theme_constant_override("outline_size", 3)
 		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		lock_label.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -407,36 +558,42 @@ func _update_planet_info_display() -> void:
 	# Nom et description
 	if planet_name_label:
 		planet_name_label.text = info["name"]
+		planet_name_label.add_theme_color_override("font_color", COLOR_WHITE_GLOW)
+		planet_name_label.add_theme_color_override("font_outline_color", info["color"])
+		planet_name_label.add_theme_constant_override("outline_size", 3)
 	
 	if planet_desc_label:
-		planet_desc_label.text = info["description"] if is_unlocked else "🔒 Locked Planet"
+		planet_desc_label.text = info["description"] if is_unlocked else "Locked Planet"
 	
 	# Difficulté
 	if difficulty_label:
 		difficulty_label.text = "★".repeat(info["difficulty"]) + "☆".repeat(4 - info["difficulty"])
+		difficulty_label.add_theme_color_override("font_color", COLOR_NEON_GOLD)
 	
 	# Puissance recommandée avec couleur selon notre niveau
 	if recommended_power_label:
 		if is_unlocked:
 			recommended_power_label.text = "Recommended Power: %d" % recommended
 			if player_power >= recommended:
-				recommended_power_label.add_theme_color_override("font_color", Color.GREEN)
+				recommended_power_label.add_theme_color_override("font_color", COLOR_NEON_GREEN)
 			elif player_power >= recommended * 0.7:
-				recommended_power_label.add_theme_color_override("font_color", Color.YELLOW)
+				recommended_power_label.add_theme_color_override("font_color", COLOR_NEON_GOLD)
 			else:
-				recommended_power_label.add_theme_color_override("font_color", Color.ORANGE_RED)
+				recommended_power_label.add_theme_color_override("font_color", COLOR_NEON_ORANGE)
 		else:
 			recommended_power_label.text = "Complete %s to unlock" % PLANETS_INFO[maxi(0, current_index - 1)]["name"]
 			recommended_power_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	
-	# Bouton jouer - PLAY ou REPLAY selon si complété
+	# Bouton jouer - PLAY ou REPLAY selon si complété (sans émojis)
 	if play_button:
 		play_button.visible = is_unlocked
 		play_button.disabled = not is_unlocked
 		if is_completed:
-			play_button.text = "🔄 REPLAY"
+			play_button.text = "REPLAY"
+			_style_button_neon(play_button, COLOR_NEON_CYAN, true)
 		else:
-			play_button.text = "▶ PLAY"
+			play_button.text = "PLAY"
+			_style_button_neon(play_button, COLOR_NEON_GREEN, true)
 	
 	# Flèches de navigation
 	if left_arrow:
