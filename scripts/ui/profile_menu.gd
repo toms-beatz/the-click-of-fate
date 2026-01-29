@@ -138,7 +138,7 @@ func _calculate_player_power() -> int:
 	# Bonus des upgrades
 	for upgrade_id in UPGRADES_CONFIG:
 		var level := SaveManager.get_upgrade_level(upgrade_id)
-		var config: Dictionary = UPGRADES_CONFIG[upgrade_id]
+		var config := UPGRADES_CONFIG[upgrade_id] as Dictionary
 		power += level * int(config["per_level"] * 0.8)
 	
 	# Bonus des équipements
@@ -187,10 +187,10 @@ func _create_upgrade_row(upgrade_id: String) -> void:
 	var current_value := _get_stat_value(upgrade_id, level)
 	var next_value := _get_stat_value(upgrade_id, level + 1)
 	var cost := _get_upgrade_cost(upgrade_id, level)
-	var max_level: int = config["max_level"]
+	var max_level: int = int(config.get("max_level", 0))
 	var is_maxed: bool = level >= max_level
 	var can_afford: bool = SaveManager.can_afford(cost)
-	var unit: String = config.get("unit", "")
+	var unit := config.get("unit", "") as String
 	
 	# Container principal
 	var panel := PanelContainer.new()
@@ -329,7 +329,7 @@ func _create_equipment_slot(slot: Dictionary) -> void:
 		var equip_data: Dictionary = EQUIPMENT_DATA[equipped_id]
 		var bonus_text := ""
 		for stat in equip_data["bonus"]:
-			var stat_config: Dictionary = UPGRADES_CONFIG.get(stat, {"name": stat})
+			var stat_config := UPGRADES_CONFIG.get(stat, {"name": stat}) as Dictionary
 			bonus_text += "+%d %s" % [equip_data["bonus"][stat], stat_config.get("name", stat)]
 		current_label.text = "%s %s (%s)" % [equip_data["icon"], equip_data["name"], bonus_text]
 		current_label.add_theme_color_override("font_color", Color.WHITE)

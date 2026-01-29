@@ -227,6 +227,12 @@ func remove_enemy(enemy: BaseEntity) -> void:
 
 ## Callback quand un ennemi meurt
 func _on_enemy_died(enemy: BaseEntity) -> void:
+	# Guard against receiving a freed/invalid enemy reference
+	if not is_instance_valid(enemy):
+		# Clean up any invalid entries
+		active_enemies = active_enemies.filter(func(e): is_instance_valid(e))
+		return
+
 	remove_enemy(enemy)
 	# Note: La vérification de fin de vague est gérée par game_combat_scene
 	# qui a sa propre liste d'ennemis et gère les transitions de vagues

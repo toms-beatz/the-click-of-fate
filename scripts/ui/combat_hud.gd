@@ -24,7 +24,13 @@ extends CanvasLayer
 @export var click_zone_height: float = 120.0
 
 ## Marge pour safe area (encoches, barres système)
-@export var safe_margin: float = 20.0
+@export var safe_margin: float = 24.0
+@export var side_margin: float = 20.0
+
+## Référence pour layout responsive
+@export var base_resolution: Vector2 = Vector2(1080, 1920)
+@export var min_ui_scale: float = 0.7
+@export var max_ui_scale: float = 1.4
 
 
 ## Composants UI
@@ -44,6 +50,16 @@ var _punishment_label: Label
 func _ready() -> void:
 	_setup_layout()
 	_connect_signals()
+	# Ensure HUD renders above other layers (helps on devices where system bars overlap)
+	layer = 100
+
+	# Ensure layout is updated after viewport is ready
+	call_deferred("_on_viewport_resized")
+	var vp := get_viewport()
+	if vp:
+		var c := Callable(self, "_on_viewport_resized")
+		if not vp.size_changed.is_connected(c):
+			vp.size_changed.connect(c)
 
 
 func _setup_layout() -> void:
@@ -51,9 +67,9 @@ func _setup_layout() -> void:
 	_root_container = MarginContainer.new()
 	_root_container.name = "RootContainer"
 	_root_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_root_container.add_theme_constant_override("margin_left", int(safe_margin))
-	_root_container.add_theme_constant_override("margin_right", int(safe_margin))
-	_root_container.add_theme_constant_override("margin_top", int(safe_margin))
+	_root_container.add_theme_constant_override("margin_left", int(side_margin))
+	_root_container.add_theme_constant_override("margin_right", int(side_margin))
+	_root_container.add_theme_constant_override("margin_top", int(side_margin))
 	_root_container.add_theme_constant_override("margin_bottom", int(safe_margin))
 	add_child(_root_container)
 	
@@ -68,6 +84,7 @@ func _setup_layout() -> void:
 	_setup_combat_zone()
 	_setup_skill_bar()
 	_setup_click_zone()
+	_add_bottom_safe_spacer()
 	_setup_punishment_overlay()
 
 
@@ -253,7 +270,55 @@ func _setup_click_zone() -> void:
 	_click_zone = ClickZoneButton.new()
 	_click_zone.name = "ClickZoneButton"
 	_click_zone.custom_minimum_size.y = click_zone_height
+	# Add click zone into the main vbox so spacer keeps it above the bottom safe area
+	_click_zone.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_click_zone.h_size_flags = Control.SIZE_EXPAND_FILL
 	_main_vbox.add_child(_click_zone)
+
+
+func _add_bottom_safe_spacer() -> void:
+	# Spacer flexible qui pousse le bouton vers le bas mais ne le sort jamais de l'écran
+	var flex_spacer := Control.new()
+	flex_spacer.name = "BottomFlexibleSpacer"
+	flex_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_main_vbox.add_child(flex_spacer)
+	# Spacer fixe minimal pour la safe area
+	var safe_spacer := Control.new()
+	safe_spacer.name = "BottomSafeSpacer"
+	safe_spacer.custom_minimum_size.y = int(safe_margin)
+	safe_spacer.size_flags_vertical = 0
+	_main_vbox.add_child(safe_spacer)
+
+
+func _on_viewport_resized() -> void:
+	# Called when viewport changes size; reflow HUD
+	_apply_responsive_layout()
+	_update_click_zone_layout()
+
+
+func _apply_responsive_layout() -> void:
+	if not _root_container:
+		return
+	var vp_size := get_viewport().get_visible_rect().size
+	if vp_size.x <= 0 or vp_size.y <= 0:
+		return
+	var scale := min(vp_size.x / base_resolution.x, vp_size.y / base_resolution.y)
+	scale = clamp(scale, min_ui_scale, max_ui_scale)
+	_root_container.rect_scale = Vector2(scale, scale)
+
+
+func _update_click_zone_layout() -> void:
+	if not _click_zone:
+		return
+	# Limite la hauteur max du bouton à 18% de l'écran (pour ne jamais dépasser)
+	var vp_size := get_viewport().get_visible_rect().size
+	var max_btn_height := int(vp_size.y * 0.18)
+	var btn_height := min(click_zone_height, max_btn_height)
+	_click_zone.custom_minimum_size.y = btn_height
+	# Ask click zone to adapt to viewport (adjusts button height + font sizes)
+	if vp_size.x > 0 and vp_size.y > 0:
+		if _click_zone.has_method("update_for_viewport"):
+			_click_zone.update_for_viewport(vp_size)
 
 
 func _setup_punishment_overlay() -> void:

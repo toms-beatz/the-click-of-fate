@@ -149,7 +149,7 @@ func register_click(action_type: StringName) -> bool:
 		return false
 	
 	# Incrémenter la jauge
-	var increment: float = PRESSURE_INCREMENT.get(actual_type, 0.0)
+	var increment := PRESSURE_INCREMENT.get(actual_type, 0.0) as float
 	_pressures[actual_type] += increment
 	
 	pressure_changed.emit(actual_type, _pressures[actual_type])
@@ -168,7 +168,7 @@ func _start_punishment(overload_type: StringName) -> void:
 	_overload_type = overload_type
 	
 	# Bloquer SEULEMENT cette action
-	var duration: float = PUNISHMENT_DURATION.get(overload_type, 4.0)
+	var duration := PUNISHMENT_DURATION.get(overload_type, 4.0) as float
 	_blocked_actions[overload_type] = true
 	_punishment_timers[overload_type] = duration
 	_current_punishment_duration = duration

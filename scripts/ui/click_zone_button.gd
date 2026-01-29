@@ -57,11 +57,16 @@ const ICON_ATTACK := "⚔️"
 const BUTTON_CORNER_RADIUS := 16
 const BUTTON_BORDER_WIDTH := 4
 const BUTTON_SPACING := 16
-const FONT_SIZE_LABEL := 24
-const FONT_SIZE_ICON := 36
 const SHADOW_SIZE := 6
 const SHADOW_OFFSET := Vector2(0, 4)
 const MIN_BUTTON_HEIGHT := 90  # Hauteur minimum pour zone tactile
+
+# Valeurs par défaut pour taille du texte; seront ajustées dynamiquement
+const DEFAULT_FONT_SIZE_LABEL := 24
+const DEFAULT_FONT_SIZE_ICON := 36
+
+# Hauteur minimale/optimale utilisée pour le scaling responsive
+@export var button_min_height: int = MIN_BUTTON_HEIGHT
 
 # =============================================================================
 # VARIABLES
@@ -150,7 +155,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	var zone_container := PanelContainer.new()
 	zone_container.name = ZONE_NAMES[zone]
 	zone_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	zone_container.custom_minimum_size.y = MIN_BUTTON_HEIGHT
+	zone_container.custom_minimum_size.y = button_min_height
 	zone_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(zone_container)
 	
@@ -197,7 +202,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	icon_label.name = "Icon"
 	icon_label.text = icon
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.add_theme_font_size_override("font_size", FONT_SIZE_ICON)
+	icon_label.add_theme_font_size_override("font_size", DEFAULT_FONT_SIZE_ICON)
 	icon_label.add_theme_color_override("font_shadow_color", color)
 	icon_label.add_theme_constant_override("shadow_offset_x", 0)
 	icon_label.add_theme_constant_override("shadow_offset_y", 2)
@@ -211,7 +216,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	label.text = label_text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", FONT_SIZE_LABEL)
+	label.add_theme_font_size_override("font_size", DEFAULT_FONT_SIZE_LABEL)
 	label.add_theme_color_override("font_color", Color.WHITE)
 	label.add_theme_color_override("font_outline_color", color.darkened(0.3))
 	label.add_theme_constant_override("outline_size", 3)
@@ -250,6 +255,31 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	
 	vbox.add_child(cooldown_bar)
 	_zone_cooldown_bars[zone] = cooldown_bar
+
+
+func set_button_min_height(h: int) -> void:
+	button_min_height = int(h)
+	for zone in _zone_rects.keys():
+		var rect := _zone_rects[zone] as PanelContainer
+		if rect:
+			rect.custom_minimum_size.y = button_min_height
+	# update fonts proportionally
+	var label_size = int(max(12, int(button_min_height * 0.28)))
+	var icon_size = int(max(18, int(button_min_height * 0.45)))
+	for z in _zone_labels.values():
+		var lbl := z as Label
+		if lbl:
+			lbl.add_theme_font_size_override("font_size", label_size)
+	for i in _zone_icons.values():
+		var ic := i as Label
+		if ic:
+			ic.add_theme_font_size_override("font_size", icon_size)
+
+
+func update_for_viewport(vp_size: Vector2) -> void:
+	# Choose button height as a percentage of viewport height (12% typical), clamped
+	var target := int(clamp(vp_size.y * 0.12, 60, 140))
+	set_button_min_height(target)
 
 
 # =============================================================================
@@ -327,7 +357,7 @@ func _on_zone_released(zone: Zone) -> void:
 # =============================================================================
 
 func _show_press_feedback(zone: Zone, pressed: bool) -> void:
-	var rect: PanelContainer = _zone_rects.get(zone)
+	var rect := _zone_rects.get(zone) as PanelContainer
 	if not rect:
 		return
 	
@@ -380,15 +410,15 @@ func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: floa
 	
 	_zone_blocked[zone] = blocked
 	
-	var rect: PanelContainer = _zone_rects.get(zone)
-	var label: Label = _zone_labels.get(zone)
-	var icon: Label = _zone_icons.get(zone)
-	var cooldown_bar: ProgressBar = _zone_cooldown_bars.get(zone)
+	var rect := _zone_rects.get(zone) as PanelContainer
+	var label := _zone_labels.get(zone) as Label
+	var icon := _zone_icons.get(zone) as Label
+	var cooldown_bar := _zone_cooldown_bars.get(zone) as ProgressBar
 	
 	if not rect:
 		return
 	
-	var stylebox: StyleBoxFlat = rect.get_theme_stylebox("panel")
+	var stylebox := rect.get_theme_stylebox("panel") as StyleBoxFlat
 	if not stylebox:
 		return
 	
@@ -408,7 +438,7 @@ func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: floa
 			cooldown_bar.value = 0
 	else:
 		# Restaurer le style original
-		var original_style: StyleBoxFlat = _zone_styles.get(zone)
+		var original_style := _zone_styles.get(zone) as StyleBoxFlat
 		if original_style:
 			stylebox.bg_color = original_style.bg_color
 			stylebox.border_color = original_style.border_color
