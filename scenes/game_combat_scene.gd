@@ -7,6 +7,10 @@
 ## - Effets visuels pour les actions
 extends Node2D
 
+# Fond de couleur couvrant toute la scène
+var scene_bg_layer: CanvasLayer
+var scene_bg_rect: ColorRect
+
 ## Configuration de la planète actuelle
 @export var current_planet: int = 0  # 0 = Mercury
 
@@ -45,7 +49,7 @@ var combat_manager: CombatManager
 var hero: AlienHero
 
 ## UI Elements
-var background: CanvasLayer
+var background: Control = null
 var combat_zone: Control
 var hud_layer: CanvasLayer
 var effects_layer: CanvasLayer
@@ -268,26 +272,40 @@ const WAVE_CLEAR_BONUS := 25
 const VICTORY_BONUS := 100
 
 
+
 func _ready() -> void:
+
 	# Charger la planète sélectionnée depuis le SaveManager
 	if SaveManager:
 		current_planet = SaveManager.get_current_planet()
 		# Marquer le début de la session pour pouvoir restore on retry
 		SaveManager.start_session()
 		coins_earned_this_run = 0
-	
+
+	# Ajoute un CanvasLayer pour le fond de couleur couvrant toute la scène (derrière tout)
+	scene_bg_layer = CanvasLayer.new()
+	scene_bg_layer.name = "SceneBackgroundLayer"
+	add_child(scene_bg_layer)
+	scene_bg_layer.layer = -100 # tout derrière
+
+	scene_bg_rect = ColorRect.new()
+	scene_bg_rect.name = "SceneBackground"
+	scene_bg_rect.color = PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).bg_top
+	scene_bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scene_bg_layer.add_child(scene_bg_rect)
+
 	# BMAD Mode: Réinitialiser le multiplicateur de vague pour chaque nouvelle planète
 	wave_bonus_multiplier = 1.0
-	
-	_setup_background()
-	_setup_combat_zone()
+
+	_setup_combat_zone() # D'abord, pour que combat_zone existe
+	_setup_background()  # Ensuite, pour pouvoir y ajouter le background
 	_setup_systems()
 	_setup_hero()
 	_setup_hud()
 	_setup_effects_layer()
 	_setup_pause_menu()
 	_connect_signals()
-	
+
 	# Afficher la cinématique avant le combat
 	_show_cinematic()
 
@@ -301,28 +319,25 @@ func _input(event: InputEvent) -> void:
 # ==================== SETUP BACKGROUND ====================
 
 func _setup_background() -> void:
-	background = CanvasLayer.new()
-	background.name = "Background"
-	background.layer = -10
-	add_child(background)
-	
+	# Le node background existe déjà et est le premier enfant de combat_zone
+
 	# COF-808: Try to load fullscreen planet background image
 	var bg_image_path: String = _get_background_image_path(current_planet)
-	
+
 	if ResourceLoader.exists(bg_image_path):
 		# Load the background image
 		var bg_texture: Texture2D = load(bg_image_path)
-		
-		# Create TextureRect for fullscreen background
+
+		# Create TextureRect for background (remplit juste la zone de combat)
 		var bg_rect := TextureRect.new()
 		bg_rect.name = "BackgroundImage"
 		bg_rect.texture = bg_texture
-		bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED  # Fullscreen without gaps
+		bg_rect.expand_mode = TextureRect.EXPAND_KEEP_SIZE
+		bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		bg_rect.modulate.a = 0.95  # Slight transparency for UI readability
 		background.add_child(bg_rect)
-		
+
 		print("[GameCombat] Loaded background image: %s" % bg_image_path)
 	else:
 		# Fallback: Use colored gradient if image not found
@@ -344,14 +359,14 @@ func _get_background_image_path(planet_id: int) -> String:
 func _setup_background_gradient_fallback() -> void:
 	# COF-808: Fallback to colored gradient if images not found (COF-807 colors)
 	var planet_colors := PLANET_COLORS.get(current_planet, PLANET_COLORS[0]) as Dictionary
-	
+
 	# Base color background
 	var bg_rect := ColorRect.new()
 	bg_rect.name = "BackgroundGradientFallback"
 	bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg_rect.color = planet_colors.bg_bottom
 	background.add_child(bg_rect)
-	
+
 	# Particules d'ambiance (étoiles/poussière)
 	_add_ambient_particles(planet_colors.accent)
 
@@ -362,7 +377,7 @@ func _add_ambient_particles(accent_color: Color) -> void:
 	stars_container.name = "Stars"
 	stars_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.add_child(stars_container)
-	
+
 	for i in range(30):
 		var star := ColorRect.new()
 		star.size = Vector2(2, 2) if randf() > 0.7 else Vector2(1, 1)
@@ -377,38 +392,37 @@ func _add_ambient_particles(accent_color: Color) -> void:
 func _setup_combat_zone() -> void:
 	combat_zone = Control.new()
 	combat_zone.name = "CombatZone"
+	# fais 60% de la hauteur du viewport
 	combat_zone.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	combat_zone.custom_minimum_size = Vector2(get_viewport_rect().size.x, get_viewport_rect().size.y * 0.6)
 	add_child(combat_zone)
-	
+
+	# Crée le node background comme premier enfant de combat_zone
+	background = Control.new()
+	background.name = "Background"
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	combat_zone.add_child(background)
+
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	
+
 	# Container pour le héros (côté gauche - BMAD MODE)
 	hero_container = Control.new()
 	hero_container.name = "HeroContainer"
-	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.55)  # Position originale
+	hero_container.position = Vector2(viewport_size.x * 0.28, viewport_size.y * 0.82)  # Position originale
 	combat_zone.add_child(hero_container)
-	
+
 	# Container pour les ennemis (côté droit - BMAD MODE)
 	enemy_container = Control.new()
 	enemy_container.name = "EnemyContainer"
-	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.55)  # Position originale
+	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.8)  # Position originale
 	combat_zone.add_child(enemy_container)
-	
+
 	# COF-907: Container pour les vaisseaux ennemis (au-dessus des troupes)
 	ship_container = Control.new()
 	ship_container.name = "ShipContainer"
 	ship_container.position = Vector2(viewport_size.x * 0.60, viewport_size.y * 0.25)  # Haut à droite
 	ship_container.z_index = 5  # Au-dessus du background, sous le HUD
 	combat_zone.add_child(ship_container)
-	
-	# Ligne de séparation combat (au centre)
-	var battle_line := ColorRect.new()
-	battle_line.name = "BattleLine"
-	battle_line.color = PLANET_COLORS.get(current_planet, PLANET_COLORS[0]).accent
-	battle_line.color.a = 0.3
-	battle_line.size = Vector2(2, viewport_size.y * 0.23)
-	battle_line.position = Vector2(viewport_size.x * 0.5, viewport_size.y * 0.31)
-	combat_zone.add_child(battle_line)
 
 
 # ==================== SETUP SYSTEMS ====================
@@ -520,8 +534,7 @@ func _create_hero_visual() -> void:
 	hero.add_child(visual)
 	
 	# COF-907: Sprite principal du héros agrandi (taille relative au viewport)
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var sprite_width: int = mini(350, int(viewport_size.x * 0.48))  # COF-907: Max 48% de la largeur - HÉROS XXL
+	var sprite_width: int = 550  # COF-907: Max 48% de la largeur - HÉROS XXL
 	var sprite_height := sprite_width * 1.2  # Ratio 1.2 pour le héros
 	
 	hero_sprite = TextureRect.new()
@@ -574,9 +587,9 @@ func set_hero_pose(pose: HeroPose, duration: float = 0.0) -> void:
 	hero_sprite.texture = hero_textures.get(pose, hero_textures[HeroPose.IDLE])
 	
 	# Animation de scaling au changement
-	var tween := create_tween()
-	tween.tween_property(hero_sprite, "scale", Vector2(1.1, 1.1), 0.05)
-	tween.tween_property(hero_sprite, "scale", Vector2(1.0, 1.0), 0.05)
+	# var tween := create_tween()
+	# tween.tween_property(hero_sprite, "scale", Vector2(1.1, 1.1), 0.05)
+	# tween.tween_property(hero_sprite, "scale", Vector2(1.0, 1.0), 0.05)
 	
 	# Si durée spécifiée, revenir à idle après
 	if duration > 0.0:
@@ -1300,7 +1313,7 @@ func _create_enemy_visual(enemy: BaseEnemy) -> Control:
 	
 	# COF-907: Taille relative au viewport - Ennemis agrandis
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var body_width: int = mini(100, int(viewport_size.x * 0.14))  # COF-907: ENNEMIS XXL (0.11 → 0.14)
+	var body_width: int = 150  # COF-907: ENNEMIS XXL (0.11 → 0.14)
 	var body_height: int = int(body_width * 1.4)
 	var sprite_size := Vector2(body_width * 2.2, body_height * 2.2)  # COF-907: +10% scaling sprite
 	

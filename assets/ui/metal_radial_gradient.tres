@@ -1,0 +1,17 @@
+﻿[gd_resource type="Shader" load_steps=2 format=3]
+
+[resource]
+code = """
+shader_type canvas_item;
+
+uniform vec4 center_color : source_color = vec4(0.85, 0.86, 0.89, 1.0);
+uniform vec4 edge_color : source_color = vec4(0.32, 0.34, 0.38, 1.0);
+uniform float radius : hint_range(0.0, 2.0) = 1.0;
+
+void fragment() {
+    float d = distance(UV, vec2(0.5));
+    d = d * 2.0 / radius;
+    d = clamp(d, 0.0, 1.0);
+    COLOR = mix(center_color, edge_color, d);
+}
+"""

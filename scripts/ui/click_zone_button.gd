@@ -151,7 +151,7 @@ func _setup_visuals() -> void:
 	_create_zone(container, Zone.ATTACK, "ATTACK", ICON_ATTACK, attack_color, COLOR_ATTACK_DARK)
 
 
-func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: String, color: Color, color_dark: Color) -> void:
+func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: String, color: Color, _color_dark: Color) -> void:
 	var zone_container := PanelContainer.new()
 	zone_container.name = ZONE_NAMES[zone]
 	zone_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -159,36 +159,36 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	zone_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(zone_container)
 	
-	# Style Sci-Fi avec dégradé glossy et bordure néon épaisse
+	# Le fond est maintenant dessiné dans _draw(), inutile de définir bg_color ici
 	var stylebox := StyleBoxFlat.new()
-	stylebox.bg_color = color.darkened(0.4)
-	
-	# Bordure néon épaisse avec glow
+	stylebox.bg_color = Color(0,0,0,0) # transparent pour laisser voir le dégradé
 	stylebox.border_color = color.lightened(0.3)
 	stylebox.border_width_top = BUTTON_BORDER_WIDTH
 	stylebox.border_width_bottom = BUTTON_BORDER_WIDTH + 1  # Plus épais en bas pour effet 3D
 	stylebox.border_width_left = BUTTON_BORDER_WIDTH
 	stylebox.border_width_right = BUTTON_BORDER_WIDTH
-	
+
 	# Coins arrondis friendly tactile
 	stylebox.corner_radius_top_left = BUTTON_CORNER_RADIUS
 	stylebox.corner_radius_top_right = BUTTON_CORNER_RADIUS
 	stylebox.corner_radius_bottom_left = BUTTON_CORNER_RADIUS
 	stylebox.corner_radius_bottom_right = BUTTON_CORNER_RADIUS
-	
+
 	# Ombre portée pour effet 3D pressable
 	stylebox.shadow_color = COLOR_SHADOW
 	stylebox.shadow_size = SHADOW_SIZE
 	stylebox.shadow_offset = SHADOW_OFFSET
-	
+
 	# Anti-aliasing pour bordures plus nettes
 	stylebox.anti_aliasing = true
 	stylebox.anti_aliasing_size = 1.5
-	
+
+	# Ajout d'un "highlight" spéculaire simulé (bande blanche semi-transparente)
+	# On utilise le draw de PanelContainer pour dessiner un highlight custom
 	zone_container.add_theme_stylebox_override("panel", stylebox)
 	_zone_rects[zone] = zone_container
 	_zone_styles[zone] = stylebox.duplicate()
-	
+
 	# VBox pour contenu (icône + texte + cooldown)
 	var vbox := VBoxContainer.new()
 	vbox.name = "Content"
@@ -196,28 +196,29 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	vbox.add_theme_constant_override("separation", 4)
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	zone_container.add_child(vbox)
-	
-	# Icône géante avec glow
+
+	# Icône géante colorée
 	var icon_label := Label.new()
 	icon_label.name = "Icon"
 	icon_label.text = icon
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_label.add_theme_font_size_override("font_size", DEFAULT_FONT_SIZE_ICON)
+	icon_label.add_theme_color_override("font_color", color)
 	icon_label.add_theme_color_override("font_shadow_color", color)
 	icon_label.add_theme_constant_override("shadow_offset_x", 0)
 	icon_label.add_theme_constant_override("shadow_offset_y", 2)
 	icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(icon_label)
 	_zone_icons[zone] = icon_label
-	
-	# Label texte XXL bold avec glow
+
+	# Label texte XXL coloré
 	var label := Label.new()
 	label.name = "Label"
 	label.text = label_text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", DEFAULT_FONT_SIZE_LABEL)
-	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_color_override("font_color", color)
 	label.add_theme_color_override("font_outline_color", color.darkened(0.3))
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -226,7 +227,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(label)
 	_zone_labels[zone] = label
-	
+
 	# Barre de cooldown améliorée (invisible par défaut)
 	var cooldown_bar := ProgressBar.new()
 	cooldown_bar.name = "CooldownBar"
@@ -236,7 +237,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	cooldown_bar.show_percentage = false
 	cooldown_bar.visible = false
 	cooldown_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
+
 	var bar_style_bg := StyleBoxFlat.new()
 	bar_style_bg.bg_color = Color(0.1, 0.1, 0.1, 0.9)
 	bar_style_bg.corner_radius_top_left = 4
@@ -244,7 +245,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	bar_style_bg.corner_radius_bottom_left = 4
 	bar_style_bg.corner_radius_bottom_right = 4
 	cooldown_bar.add_theme_stylebox_override("background", bar_style_bg)
-	
+
 	var bar_style_fill := StyleBoxFlat.new()
 	bar_style_fill.bg_color = Color("#10B981")  # Vert émeraude
 	bar_style_fill.corner_radius_top_left = 4
@@ -252,7 +253,7 @@ func _create_zone(parent: HBoxContainer, zone: Zone, label_text: String, icon: S
 	bar_style_fill.corner_radius_bottom_left = 4
 	bar_style_fill.corner_radius_bottom_right = 4
 	cooldown_bar.add_theme_stylebox_override("fill", bar_style_fill)
-	
+
 	vbox.add_child(cooldown_bar)
 	_zone_cooldown_bars[zone] = cooldown_bar
 
@@ -296,10 +297,10 @@ func _gui_input(event: InputEvent) -> void:
 func _handle_touch(event: InputEventScreenTouch) -> void:
 	var local_pos := get_local_mouse_position()
 	var zone := _get_zone_from_position(local_pos)
-	
+
 	if _zone_blocked.get(zone, false):
 		return
-	
+
 	if event.pressed:
 		_on_zone_pressed(zone)
 	else:
@@ -309,13 +310,13 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 func _handle_mouse(event: InputEventMouseButton) -> void:
 	if event.button_index != MOUSE_BUTTON_LEFT:
 		return
-	
+
 	var local_pos := event.position - global_position
 	var zone := _get_zone_from_position(local_pos)
-	
+
 	if _zone_blocked.get(zone, false):
 		return
-	
+
 	if event.pressed:
 		_on_zone_pressed(zone)
 	else:
@@ -325,7 +326,7 @@ func _handle_mouse(event: InputEventMouseButton) -> void:
 func _get_zone_from_position(local_pos: Vector2) -> Zone:
 	var width := size.x if size.x > 0 else 680.0
 	var ratio_x := local_pos.x / width
-	
+
 	if ratio_x < 0.33:
 		return Zone.HEAL
 	elif ratio_x < 0.66:
@@ -360,16 +361,16 @@ func _show_press_feedback(zone: Zone, pressed: bool) -> void:
 	var rect := _zone_rects.get(zone) as PanelContainer
 	if not rect:
 		return
-	
+
 	# Annuler le tween précédent
 	if _feedback_tweens.has(zone) and _feedback_tweens[zone]:
 		_feedback_tweens[zone].kill()
-	
+
 	var tween := create_tween()
 	_feedback_tweens[zone] = tween
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_BACK)
-	
+
 	if pressed:
 		# Effet pressed: scale down 0.95 + shift down 3px + assombrissement
 		tween.set_parallel(true)
@@ -404,30 +405,30 @@ func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: floa
 			zone = Zone.ATTACK
 		_:
 			return
-	
+
 	if _zone_blocked[zone] == blocked and not blocked:
 		return
-	
+
 	_zone_blocked[zone] = blocked
-	
+
 	var rect := _zone_rects.get(zone) as PanelContainer
 	var label := _zone_labels.get(zone) as Label
 	var icon := _zone_icons.get(zone) as Label
 	var cooldown_bar := _zone_cooldown_bars.get(zone) as ProgressBar
-	
+
 	if not rect:
 		return
-	
+
 	var stylebox := rect.get_theme_stylebox("panel") as StyleBoxFlat
 	if not stylebox:
 		return
-	
+
 	if blocked:
 		# Style désactivé
 		stylebox.bg_color = COLOR_DISABLED
 		stylebox.border_color = Color(0.4, 0.4, 0.4, 0.5)
 		stylebox.shadow_size = 1
-		
+
 		if label:
 			label.text = "%.1fs" % time_remaining
 			label.modulate.a = 0.6
@@ -443,7 +444,7 @@ func set_zone_blocked(zone_name: StringName, blocked: bool, time_remaining: floa
 			stylebox.bg_color = original_style.bg_color
 			stylebox.border_color = original_style.border_color
 			stylebox.shadow_size = original_style.shadow_size
-		
+
 		if label:
 			label.text = _zone_original_names[zone]
 			label.modulate.a = 1.0
@@ -464,3 +465,39 @@ func get_current_zone_name() -> StringName:
 	if _current_zone == null:
 		return &""
 	return ZONE_NAMES[_current_zone]
+
+# Ajoute le dessin du highlight métallique sur chaque zone dans _draw()
+func _draw() -> void:
+	for zone in _zone_rects.keys():
+		var rect_node = _zone_rects[zone]
+		if rect_node and rect_node.is_visible_in_tree():
+			var rect = rect_node.get_global_rect()
+			# Dégradé radial métal
+			var radial_tex := _make_radial_metal_gradient(rect.size)
+			draw_texture_rect(radial_tex, rect, false)
+			# Highlight spéculaire (conserve l'effet)
+			var highlight_height = rect.size.y * 0.22
+			var highlight_y = rect.position.y + rect.size.y * 0.13
+			var highlight_rect = Rect2(rect.position.x + rect.size.x * 0.12, highlight_y, rect.size.x * 0.76, highlight_height)
+			var grad = GradientTexture2D.new()
+			grad.gradient = Gradient.new()
+			grad.gradient.colors = [Color(1,1,1,0.38), Color(1,1,1,0.12), Color(1,1,1,0.0)]
+			grad.gradient.offsets = [0.0, 0.7, 1.0]
+			grad.width = int(highlight_rect.size.x)
+			grad.height = int(highlight_rect.size.y)
+			draw_texture_rect(grad, highlight_rect, false)
+
+# Utilitaire pour générer une texture de dégradé radial métal
+func _make_radial_metal_gradient(size: Vector2) -> ImageTexture:
+	var img := Image.create(int(size.x), int(size.y), false, Image.FORMAT_RGBA8)
+	var center := size / 2.0
+	var radius := float(min(size.x, size.y)) * 0.5
+	for y in range(int(size.y)):
+		for x in range(int(size.x)):
+			var dist := ((Vector2(x, y) - center).length()) / radius
+			dist = clamp(dist, 0.0, 1.0)
+			# Métal : centre très clair, bords plus foncés
+			var c := Color(0.92, 0.93, 0.96).lerp(Color(0.55, 0.58, 0.62), pow(dist, 1.5))
+			img.set_pixel(x, y, c)
+	var tex := ImageTexture.create_from_image(img)
+	return tex
