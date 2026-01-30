@@ -83,75 +83,75 @@ const GACHA_TYPES := {
 		"name": "Gacha Commun",
 		"price": 500,
 		"color": Color("#33FF88"),
-		"capsule": "res://assets/sprites/gacha/capsule-common.png",
+		"capsule": "res://assets/sprites/gacha/gacha-simple.png",
 		"pool": [
-			"sword_iron", "sword_steel", "sword_bronze",
-			"armor_leather", "armor_chainmail", "armor_iron",
-			"helmet_leather", "helmet_iron", "helmet_steel"
+			"sword_simple", "sword_angelique", "sword_corne",
+			"armor_fer", "armor_cool", "armor_nul",
+			"helmet_basique", "helmet_fer", "helmet_nul"
 		]
 	},
 	"rare": {
 		"name": "Gacha Rare",
 		"price": 1500,
 		"color": Color("#00D4FF"),
-		"capsule": "res://assets/sprites/gacha/capsule-rare.png",
+		"capsule": "res://assets/sprites/gacha/gacha-rare.png",
 		"pool": [
-			"sword_crystal", "sword_thunder", "sword_frost",
-			"armor_crystal", "armor_thunder", "armor_frost",
-			"helmet_crystal", "helmet_thunder", "helmet_frost"
+			"sword_emeraude", "sword_flamme", "sword_glace",
+			"armor_ninja", "armor_rouge", "armor_pasdingue",
+			"helmet_flamme", "helmet_futur", "helmet_verre"
 		]
 	},
 	"legendary": {
 		"name": "Gacha Légendaire",
 		"price": 3500,
 		"color": Color("#AA44FF"),
-		"capsule": "res://assets/sprites/gacha/capsule-legendary.png",
+		"capsule": "res://assets/sprites/gacha/gacha-légendaire.png",
 		"pool": [
-			"sword_dragon", "sword_void", "sword_divine",
-			"armor_dragon", "armor_void", "armor_divine",
-			"helmet_dragon", "helmet_void", "helmet_divine"
+			"sword_onyx", "sword_turboglace", "sword_turbolegendaire",
+			"armor_onyx", "armor_gold", "armor_arcenciel",
+			"helmet_halo", "armor_spatial", "sword_turboonyx"
 		]
 	}
 }
 
-## Données des équipements gacha (27 nouveaux items)
+## Données des équipements gacha - répartis équitablement entre common/rare/legendary
 const GACHA_EQUIPMENT_DATA := {
-	# === ARMES COMMUNES ===
-	"sword_iron": {"name": "Iron Blade", "slot": "weapon", "bonus": "+3 DMG", "bonus_value": 3, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_iron.png"},
-	"sword_steel": {"name": "Steel Sword", "slot": "weapon", "bonus": "+4 DMG", "bonus_value": 4, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_steel.png"},
-	"sword_bronze": {"name": "Bronze Cutter", "slot": "weapon", "bonus": "+5 DMG", "bonus_value": 5, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_bronze.png"},
-	# === ARMES RARES ===
-	"sword_crystal": {"name": "Crystal Edge", "slot": "weapon", "bonus": "+8 DMG", "bonus_value": 8, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_crystal.png"},
-	"sword_thunder": {"name": "Thunder Blade", "slot": "weapon", "bonus": "+10 DMG", "bonus_value": 10, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_thunder.png"},
-	"sword_frost": {"name": "Frost Fang", "slot": "weapon", "bonus": "+12 DMG", "bonus_value": 12, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_frost.png"},
-	# === ARMES LÉGENDAIRES ===
-	"sword_dragon": {"name": "Dragon Slayer", "slot": "weapon", "bonus": "+18 DMG", "bonus_value": 18, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_dragon.png"},
-	"sword_void": {"name": "Void Reaper", "slot": "weapon", "bonus": "+22 DMG", "bonus_value": 22, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_void.png"},
-	"sword_divine": {"name": "Divine Excalibur", "slot": "weapon", "bonus": "+28 DMG", "bonus_value": 28, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_divine.png"},
+	# === ÉPÉES COMMUNES ===
+	"sword_simple": {"name": "Épée Simple", "slot": "weapon", "bonus": "+3 ATT", "bonus_value": 3, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/épée-simple.png"},
+	"sword_angelique": {"name": "Épée Angélique", "slot": "weapon", "bonus": "+4 ATT", "bonus_value": 4, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/épées-angelique.png"},
+	"sword_corne": {"name": "Épée Corne", "slot": "weapon", "bonus": "+5 ATT", "bonus_value": 5, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/épées-corne.png"},
+	# === ÉPÉES RARES ===
+	"sword_emeraude": {"name": "Épée Émeraude", "slot": "weapon", "bonus": "+8 ATT", "bonus_value": 8, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/épées-emeraude.png"},
+	"sword_flamme": {"name": "Épée Flamme", "slot": "weapon", "bonus": "+10 ATT", "bonus_value": 10, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/épées-flamme.png"},
+	"sword_glace": {"name": "Épée Glace", "slot": "weapon", "bonus": "+12 ATT", "bonus_value": 12, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/épées-glace.png"},
+	# === ÉPÉES LÉGENDAIRES ===
+	"sword_onyx": {"name": "Épée Onyx", "slot": "weapon", "bonus": "+18 ATT", "bonus_value": 18, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-onyx.png"},
+	"sword_turboglace": {"name": "Épée TurboGlace", "slot": "weapon", "bonus": "+22 ATT", "bonus_value": 22, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-turboglace.png"},
+	"sword_turbolegendaire": {"name": "Épée TurboLégendaire", "slot": "weapon", "bonus": "+28 ATT", "bonus_value": 28, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-turbolegendaire.png"},
 	# === ARMURES COMMUNES ===
-	"armor_leather": {"name": "Leather Vest", "slot": "armor", "bonus": "+3% ESQ", "bonus_value": 3, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_leather.png"},
-	"armor_chainmail": {"name": "Chainmail", "slot": "armor", "bonus": "+4% ESQ", "bonus_value": 4, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_chainmail.png"},
-	"armor_iron": {"name": "Iron Plate", "slot": "armor", "bonus": "+5% ESQ", "bonus_value": 5, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_iron.png"},
+	"armor_fer": {"name": "Armure Fer", "slot": "armor", "bonus": "+3 DEF", "bonus_value": 3, "stat": "defense", "rarity": "common", "image": "res://assets/sprites/equipment/armures-fer.png"},
+	"armor_cool": {"name": "Armure Cool", "slot": "armor", "bonus": "+4 DEF", "bonus_value": 4, "stat": "defense", "rarity": "common", "image": "res://assets/sprites/equipment/armures-cool.png"},
+	"armor_nul": {"name": "Armure Nul", "slot": "armor", "bonus": "+5 DEF", "bonus_value": 5, "stat": "defense", "rarity": "common", "image": "res://assets/sprites/equipment/armures-nul.png"},
 	# === ARMURES RARES ===
-	"armor_crystal": {"name": "Crystal Guard", "slot": "armor", "bonus": "+8% ESQ", "bonus_value": 8, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_crystal.png"},
-	"armor_thunder": {"name": "Storm Armor", "slot": "armor", "bonus": "+10% ESQ", "bonus_value": 10, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_thunder.png"},
-	"armor_frost": {"name": "Frost Mail", "slot": "armor", "bonus": "+12% ESQ", "bonus_value": 12, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_frost.png"},
+	"armor_ninja": {"name": "Armure Ninja", "slot": "armor", "bonus": "+8 DEF", "bonus_value": 8, "stat": "defense", "rarity": "rare", "image": "res://assets/sprites/equipment/armures-ninja.png"},
+	"armor_rouge": {"name": "Armure Rouge", "slot": "armor", "bonus": "+10 DEF", "bonus_value": 10, "stat": "defense", "rarity": "rare", "image": "res://assets/sprites/equipment/armures-rouge.png"},
+	"armor_pasdingue": {"name": "Armure PasDingue", "slot": "armor", "bonus": "+12 DEF", "bonus_value": 12, "stat": "defense", "rarity": "rare", "image": "res://assets/sprites/equipment/armures-pasdingue.png"},
 	# === ARMURES LÉGENDAIRES ===
-	"armor_dragon": {"name": "Dragon Scale", "slot": "armor", "bonus": "+16% ESQ", "bonus_value": 16, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_dragon.png"},
-	"armor_void": {"name": "Void Shroud", "slot": "armor", "bonus": "+20% ESQ", "bonus_value": 20, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_void.png"},
-	"armor_divine": {"name": "Divine Aegis", "slot": "armor", "bonus": "+25% ESQ", "bonus_value": 25, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_divine.png"},
+	"armor_onyx": {"name": "Armure Onyx", "slot": "armor", "bonus": "+16 DEF", "bonus_value": 16, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-onyx.png"},
+	"armor_gold": {"name": "Armure Gold", "slot": "armor", "bonus": "+20 DEF", "bonus_value": 20, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-gold.png"},
+	"armor_arcenciel": {"name": "Armure Arcenciel", "slot": "armor", "bonus": "+25 DEF", "bonus_value": 25, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-arcenciel.png"},
 	# === CASQUES COMMUNS ===
-	"helmet_leather": {"name": "Leather Cap", "slot": "helmet", "bonus": "+2 SOIN", "bonus_value": 2, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_leather.png"},
-	"helmet_iron": {"name": "Iron Helm", "slot": "helmet", "bonus": "+3 SOIN", "bonus_value": 3, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_iron.png"},
-	"helmet_steel": {"name": "Steel Visor", "slot": "helmet", "bonus": "+4 SOIN", "bonus_value": 4, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_steel.png"},
+	"helmet_basique": {"name": "Casque Basique", "slot": "helmet", "bonus": "+2 SOIN", "bonus_value": 2, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/casques-basique.png"},
+	"helmet_fer": {"name": "Casque Fer", "slot": "helmet", "bonus": "+3 SOIN", "bonus_value": 3, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/casques-fer.png"},
+	"helmet_nul": {"name": "Casque Nul", "slot": "helmet", "bonus": "+4 SOIN", "bonus_value": 4, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/casques-nul.png"},
 	# === CASQUES RARES ===
-	"helmet_crystal": {"name": "Crystal Crown", "slot": "helmet", "bonus": "+6 SOIN", "bonus_value": 6, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_crystal.png"},
-	"helmet_thunder": {"name": "Storm Hood", "slot": "helmet", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_thunder.png"},
-	"helmet_frost": {"name": "Frost Helm", "slot": "helmet", "bonus": "+10 SOIN", "bonus_value": 10, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_frost.png"},
+	"helmet_flamme": {"name": "Casque Flamme", "slot": "helmet", "bonus": "+6 SOIN", "bonus_value": 6, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/casques-flamme.png"},
+	"helmet_futur": {"name": "Casque Futur", "slot": "helmet", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/casques-futur.png"},
+	"helmet_verre": {"name": "Casque Verre", "slot": "helmet", "bonus": "+10 SOIN", "bonus_value": 10, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/casques-verre.png"},
 	# === CASQUES LÉGENDAIRES ===
-	"helmet_dragon": {"name": "Dragon Horns", "slot": "helmet", "bonus": "+14 SOIN", "bonus_value": 14, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_dragon.png"},
-	"helmet_void": {"name": "Void Mask", "slot": "helmet", "bonus": "+18 SOIN", "bonus_value": 18, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_void.png"},
-	"helmet_divine": {"name": "Divine Halo", "slot": "helmet", "bonus": "+22 SOIN", "bonus_value": 22, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_divine.png"}
+	"helmet_halo": {"name": "Casque Halo", "slot": "helmet", "bonus": "+14 SOIN", "bonus_value": 14, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/casques-halo.png"},
+	"armor_spatial": {"name": "Armure Spatiale", "slot": "armor", "bonus": "+30 DEF", "bonus_value": 30, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-spatial.png"},
+	"sword_turboonyx": {"name": "Épée TurboOnyx", "slot": "weapon", "bonus": "+32 ATT", "bonus_value": 32, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-turboonyx.png"}
 }
 
 # =============================================================================
@@ -618,11 +618,17 @@ func _on_gacha_pull(gacha_type: String) -> void:
 	var pool: Array = gacha_data["pool"]
 	var won_item_id: String = pool[randi() % pool.size()]
 	
-	# Ajouter à l'inventaire
-	SaveManager.add_equipment(won_item_id)
-	
-	# Lancer l'animation
-	_play_gacha_animation(gacha_type, won_item_id)
+	# Vérifier si on possède déjà l'item
+	if SaveManager.owns_equipment(won_item_id):
+		# Si on possède déjà, donner 2000 SC
+		SaveManager.add_currency(2000)
+		_update_currency_display()
+		_show_feedback("Doublon ! +2000 SC reçus", true)
+	else:
+		# Sinon, ajouter à l'inventaire
+		SaveManager.add_equipment(won_item_id)
+		# Lancer l'animation
+		_play_gacha_animation(gacha_type, won_item_id)
 
 
 # =============================================================================

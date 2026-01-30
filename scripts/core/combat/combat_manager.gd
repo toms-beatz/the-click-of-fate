@@ -191,7 +191,8 @@ func _do_attack() -> void:
 	if not active_enemies.is_empty():
 		var target := _get_first_alive_enemy()
 		if target:
-			target.take_damage(BASE_ATTACK_DAMAGE, false)
+			var damage := hero.base_stats.attack
+			target.take_damage(damage, false)
 
 
 ## Retourne le premier ennemi vivant

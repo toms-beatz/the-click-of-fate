@@ -14,6 +14,13 @@ var scene_bg_rect: ColorRect
 ## Configuration de la planète actuelle
 @export var current_planet: int = 0  # 0 = Mercury
 
+## Est-ce le niveau secret (boss rush x3)?
+var is_secret_level: bool = false
+## Index du boss actuel dans le niveau secret (0-3)
+var secret_boss_index: int = 0
+## Nombre de boss vaincus dans le niveau secret
+var secret_bosses_defeated: int = 0
+
 ## Couleurs par planète
 const PLANET_COLORS := {
 	0: {  # Mercury
@@ -39,6 +46,12 @@ const PLANET_COLORS := {
 		"bg_bottom": Color(0.1, 0.15, 0.3),
 		"accent": Color(0.3, 0.6, 0.9),
 		"name": "EARTH"
+	},
+	4: {  # Secret Level (uses Earth background but darker)
+		"bg_top": Color(0.01, 0.02, 0.08),
+		"bg_bottom": Color(0.05, 0.08, 0.15),
+		"accent": Color(0.8, 0.2, 0.2),
+		"name": "???"
 	}
 }
 
@@ -133,12 +146,38 @@ const ENEMY_SPRITES := {
 }
 
 ## Mini-boss sprites
-const MINIBOSS_SPRITES := {
-	"idle": "res://assets/sprites/enemies/mini-boss.png",
-	"screaming": "res://assets/sprites/enemies/mini-boss-screaming.png",
-	"screaming2": "res://assets/sprites/enemies/mini-boss-screaming-2.png",
-	"fireball": "res://assets/sprites/enemies/mini-boss-fireball.png",
-	"other_side": "res://assets/sprites/enemies/mini-boss-other-side.png"
+## Sprites des boss par planète - COF-910: 2 sprites d'attaque aléatoires
+const BOSS_SPRITES := {
+	# Mercury Guardian (planète 0)
+	0: {
+		"idle": "res://assets/sprites/enemies/bosses/mercury/mercury-boss.png",
+		"attack_1": "res://assets/sprites/enemies/bosses/mercury/mercury-boss-attaque-1.png",
+		"attack_2": "res://assets/sprites/enemies/bosses/mercury/mercury-boss-attaque-2.png"
+	},
+	# Venus Queen (planète 1)
+	1: {
+		"idle": "res://assets/sprites/enemies/bosses/venus/venus-queen.png",
+		"attack_1": "res://assets/sprites/enemies/bosses/venus/venus-queen-attaque-1.png",
+		"attack_2": "res://assets/sprites/enemies/bosses/venus/venus-queen-attaque-2.png"
+	},
+	# Mars Warlord (planète 2)
+	2: {
+		"idle": "res://assets/sprites/enemies/bosses/mars/mars-warworld.png",
+		"attack_1": "res://assets/sprites/enemies/bosses/mars/mars-warworld-attaque-1.png",
+		"attack_2": "res://assets/sprites/enemies/bosses/mars/mars-warworld-attaque-2.png"
+	},
+	# Rick - Dr. Mortis (planète 3 - Earth)
+	3: {
+		"idle": "res://assets/sprites/enemies/bosses/earth/rick.png",
+		"attack_1": "res://assets/sprites/enemies/bosses/earth/rick-attaque-1.png",
+		"attack_2": "res://assets/sprites/enemies/bosses/earth/rick-attaque-2.png"
+	},
+	# Niveau secret (planète 4) - utilise le même sprite que Earth
+	4: {
+		"idle": "res://assets/sprites/enemies/bosses/earth/rick.png",
+		"attack_1": "res://assets/sprites/enemies/bosses/earth/rick-attaque-1.png",
+		"attack_2": "res://assets/sprites/enemies/bosses/earth/rick-attaque-2.png"
+	}
 }
 
 ## COF-907: Vaisseaux ennemis - sprites aériens
@@ -151,8 +190,20 @@ const ENEMY_SHIPS := [
 	"res://assets/sprites/enemies/vaisseau-6.png"
 ]
 
-## COF-907: Configuration vaisseaux par wave (Array indexé par wave-1)
-const SHIPS_PER_WAVE := [1, 1, 2, 2, 3]  # Wave 1-5: nombre de vaisseaux
+## COF-910: Configuration vaisseaux par wave (Array indexé par wave-1)
+## Wave 1-3: 0 vaisseau, Wave 4: 1 vaisseau, Wave 5: 3 vaisseaux
+const SHIPS_PER_WAVE := [0, 0, 0, 1, 3]
+
+## COF-910: Configuration ennemis au sol par vague
+## Wave 1: 1, Wave 2: 3, Wave 3-5: 5 ennemis max
+const ENEMIES_PER_WAVE_NEW := [1, 3, 5, 5, 5]
+
+## COF-910: Multiplicateurs de stats ennemis (plus forts individuellement)
+const COF910_ENEMY_HP_MULT := 3.0
+const COF910_ENEMY_ATK_MULT := 2.5
+
+## COF-910: Multiplicateur boss (x5 HP et ATK)
+const COF910_BOSS_STATS_MULT := 5.0
 
 ## ========== BALANCE CONFIG ==========
 ## Héros
@@ -166,12 +217,13 @@ const HERO_DODGE_CHANCE := 0.08
 const HEAL_BASE_AMOUNT := 20
 const HEAL_BOOST_MULTIPLIER := 1.5  # x1.5 si boost actif
 
-## Ennemis par planète (multiplicateurs)
+## Ennemis par planète (multiplicateurs) - Progression linéaire
+## Mercury = facile, Earth = difficile (même difficulté qu'avant)
 const PLANET_ENEMY_MULTIPLIERS := {
-	0: {"hp": 1.0, "atk": 1.0, "speed": 1.3, "name": "Scout"},  # Mercury - rapide
-	1: {"hp": 0.9, "atk": 1.2, "speed": 1.0, "name": "Toxin"},  # Venus - toxic DPS
-	2: {"hp": 1.2, "atk": 0.9, "speed": 0.9, "name": "Regen"},  # Mars - tanky
-	3: {"hp": 1.5, "atk": 1.3, "speed": 0.7, "name": "Titan"},  # Earth - boss-like
+	0: {"hp": 0.5, "atk": 0.5, "speed": 1.0, "name": "Scout"},   # Mercury - FACILE (intro)
+	1: {"hp": 0.7, "atk": 0.7, "speed": 1.0, "name": "Toxin"},   # Venus - moyen-facile
+	2: {"hp": 0.9, "atk": 0.9, "speed": 0.9, "name": "Regen"},   # Mars - moyen-difficile
+	3: {"hp": 1.2, "atk": 1.1, "speed": 0.8, "name": "Titan"},   # Earth - DIFFICILE (boss-like)
 }
 
 ## Scaling de puissance du joueur par planète complétée
@@ -193,11 +245,13 @@ const PLANET_RECOMMENDED_POWER := {
 }
 
 ## Boss par planète (après les 5 vagues) - Plus durs que la vague 5!
+## Boss par planète (après les 5 vagues) - Progression linéaire
+## Mercury = intro facile, Earth = boss final difficile
 const PLANET_BOSSES := {
-	0: {"name": "Mercury Guardian", "hp": 600, "atk": 28, "speed": 0.9, "color": Color(1.0, 0.5, 0.2), "emoji": "🛡️", "special": "shield"},
-	1: {"name": "Venus Queen", "hp": 800, "atk": 35, "speed": 0.85, "color": Color(0.8, 0.9, 0.2), "emoji": "👑", "special": "poison"},
-	2: {"name": "Mars Warlord", "hp": 1000, "atk": 42, "speed": 0.75, "color": Color(0.9, 0.4, 0.3), "emoji": "⚔️", "special": "rage"},
-	3: {"name": "DR. MORTIS", "hp": 2200, "atk": 55, "speed": 0.6, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},  # BOSS FINAL!
+	0: {"name": "Mercury Guardian", "hp": 200, "atk": 10, "speed": 1.0, "color": Color(1.0, 0.5, 0.2), "emoji": "🛡️", "special": "shield"},    # FACILE - intro
+	1: {"name": "Venus Queen", "hp": 450, "atk": 18, "speed": 0.9, "color": Color(0.8, 0.9, 0.2), "emoji": "👑", "special": "poison"},          # Moyen-facile
+	2: {"name": "Mars Warlord", "hp": 800, "atk": 30, "speed": 0.8, "color": Color(0.9, 0.4, 0.3), "emoji": "⚔️", "special": "rage"},           # Moyen-difficile
+	3: {"name": "DR. MORTIS", "hp": 1500, "atk": 45, "speed": 0.65, "color": Color(0.6, 0.2, 0.8), "emoji": "💀", "special": "final"},          # DIFFICILE - boss final
 }
 
 ## Cinématique de fin (après avoir battu Dr. Mortis)
@@ -234,7 +288,7 @@ var _heal_power_bonus: int = 0
 ## Cinématiques par planète
 const PLANET_CINEMATICS := {
 	0: [  # Mercury
-		{"text": "My name is Zyx-7. I had a family once... a beautiful colony on the outer rim.", "emoji": "👽", "character": "zyx"},
+		{"text": "My name is Kryntar. I had a family once... a beautiful colony on the outer rim.", "emoji": "👽", "character": "zyx"},
 		{"text": "Until HE came. Dr. Mortis. A human scientist who destroyed everything I loved.", "emoji": "💔", "character": "mortis"},
 		{"text": "Now I hunt him across the stars. Mercury is my first stop...", "emoji": "🚀", "character": "zyx"},
 	],
@@ -252,6 +306,9 @@ const PLANET_CINEMATICS := {
 		{"text": "This is it. Earth. His homeworld. His fortress.", "emoji": "🌍", "character": "zyx"},
 		{"text": "Dr. Mortis is here. I can feel it. After all these years...", "emoji": "👁️", "character": "mortis"},
 		{"text": "Today, my family will be avenged. Today, HE DIES.", "emoji": "💀", "character": "zyx"},
+	],
+	4: [  # Secret Level - just "..."
+		{"text": "...", "emoji": "💀", "character": "zyx"},
 	],
 }
 
@@ -281,6 +338,11 @@ func _ready() -> void:
 		# Marquer le début de la session pour pouvoir restore on retry
 		SaveManager.start_session()
 		coins_earned_this_run = 0
+	
+	# Détecter le niveau secret (planète 4)
+	is_secret_level = (current_planet == 4)
+	if is_secret_level:
+		total_waves = 1  # Juste une vague avec tous les boss
 
 	# Ajoute un CanvasLayer pour le fond de couleur couvrant toute la scène (derrière tout)
 	scene_bg_layer = CanvasLayer.new()
@@ -417,10 +479,10 @@ func _setup_combat_zone() -> void:
 	enemy_container.position = Vector2(viewport_size.x * 0.68, viewport_size.y * 0.8)  # Position originale
 	combat_zone.add_child(enemy_container)
 
-	# COF-907: Container pour les vaisseaux ennemis (au-dessus des troupes)
+	# COF-910: Container pour les vaisseaux ennemis (plus à gauche)
 	ship_container = Control.new()
 	ship_container.name = "ShipContainer"
-	ship_container.position = Vector2(viewport_size.x * 0.60, viewport_size.y * 0.25)  # Haut à droite
+	ship_container.position = Vector2(viewport_size.x * 0.45, viewport_size.y * 0.25)  # COF-910: Déplacé à gauche
 	ship_container.z_index = 5  # Au-dessus du background, sous le HUD
 	combat_zone.add_child(ship_container)
 
@@ -562,19 +624,33 @@ func _create_hero_visual() -> void:
 	hp_fill.size = Vector2(hp_bar_width - 2, 10)
 	hp_fill.position = Vector2(float(-hp_bar_width) * 0.5 + 1, float(-sprite_height) - 14)
 	visual.add_child(hp_fill)
+	
+	# COF-910: Animation slide-in du héros depuis la gauche
+	var final_position := hero_container.position
+	var start_position := Vector2(-300, final_position.y)
+	hero_container.position = start_position
+	
+	var slide_tween := create_tween()
+	slide_tween.set_ease(Tween.EASE_OUT)
+	slide_tween.set_trans(Tween.TRANS_BACK)
+	slide_tween.tween_property(hero_container, "position", final_position, 0.8)
 
 
 func _load_hero_textures() -> void:
 	## Charge toutes les textures du héros
 	var base_path := "res://assets/sprites/hero/"
+	# Les fichiers présents sont `alien-stand.png` et `alien-tire.png`.
+	var idle_tex := load(base_path + "alien-stand.png")
+	var shoot_tex := load(base_path + "alien-tire.png")
+
 	hero_textures = {
-		HeroPose.IDLE: load(base_path + "hero_idle.png"),
-		HeroPose.READY: load(base_path + "hero_ready.png"),
-		HeroPose.DODGE: load(base_path + "hero_dodge.png"),
-		HeroPose.ATTACK_1: load(base_path + "hero_attack_1.png"),
-		HeroPose.ATTACK_2: load(base_path + "hero_attack_2.png"),
-		HeroPose.ATTACK_3: load(base_path + "hero_attack_3.png"),
-		HeroPose.SPECIAL: load(base_path + "hero_special.png"),
+		HeroPose.IDLE: idle_tex,
+		HeroPose.READY: idle_tex,
+		HeroPose.DODGE: idle_tex,
+		HeroPose.ATTACK_1: shoot_tex,
+		HeroPose.ATTACK_2: shoot_tex,
+		HeroPose.ATTACK_3: shoot_tex,
+		HeroPose.SPECIAL: shoot_tex,
 	}
 
 
@@ -1234,19 +1310,78 @@ func _spawn_wave() -> void:
 		wave_label.text = "WAVE %d / %d" % [current_wave, total_waves]
 		wave_label.add_theme_color_override("font_color", Color.WHITE)
 	
-	# Déterminer le nombre d'ennemis pour cette vague (selon la planète)
+	# COF-910: Utiliser la nouvelle configuration de vagues
 	var wave_idx := clampi(current_wave - 1, 0, 4)  # Max 5 waves
-	var planet_enemies = ENEMIES_PER_WAVE.get(current_planet, ENEMIES_PER_WAVE[0])
-	enemies_in_wave = planet_enemies[wave_idx]
+	enemies_in_wave = ENEMIES_PER_WAVE_NEW[wave_idx]
 	
+	# COF-910: Spawn tous les ennemis d'un coup avec animation slide-in
 	for i in range(enemies_in_wave):
-		await get_tree().create_timer(0.4).timeout
-		_spawn_enemy(i)
+		_spawn_enemy_with_slide(i)
 	
-	# COF-907: Spawn vaisseaux ennemis aériens
-	var ship_idx: int = clampi(current_wave - 1, 0, SHIPS_PER_WAVE.size() - 1)
-	var ships_count: int = SHIPS_PER_WAVE[ship_idx]
-	_spawn_enemy_ships(ships_count)
+	# COF-910: Spawn vaisseaux selon nouvelle config (0,0,0,1,3)
+	var ships_count: int = SHIPS_PER_WAVE[wave_idx]
+	if ships_count > 0:
+		_spawn_enemy_ships(ships_count)
+
+
+## COF-910: Nouvelle fonction de spawn avec animation slide-in depuis la droite
+func _spawn_enemy_with_slide(index: int) -> void:
+	var enemy := BaseEnemy.new()
+	enemy.name = "Enemy_%d" % index
+	enemy.planet_type = current_planet as BaseEnemy.PlanetType
+	
+	# Récupérer les multiplicateurs de la planète
+	var planet_mult: Dictionary = PLANET_ENEMY_MULTIPLIERS.get(current_planet, PLANET_ENEMY_MULTIPLIERS[0])
+	
+	# Calculer le scaling par vague
+	var wave_hp_mult := pow(WAVE_HP_SCALING, current_wave - 1)
+	var wave_atk_mult := pow(WAVE_ATK_SCALING, current_wave - 1)
+	
+	# COF-910: Appliquer les multiplicateurs x3 HP et x2.5 ATK
+	var enemy_stats := EntityStats.new()
+	enemy_stats.display_name = planet_mult.name
+	enemy_stats.max_hp = int(45 * planet_mult.hp * wave_hp_mult * COF910_ENEMY_HP_MULT)
+	enemy_stats.attack = int(8 * planet_mult.atk * wave_atk_mult * COF910_ENEMY_ATK_MULT)
+	enemy_stats.attack_speed = 0.8 * planet_mult.speed
+	enemy_stats.crit_chance = 0.05 + (current_wave * 0.01)
+	enemy.base_stats = enemy_stats
+	
+	# Position finale - formation compacte
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var enemy_spacing_x: float = viewport_size.x * 0.06
+	var enemy_spacing_y: float = 45.0
+	var rows: int = 3  # 3 rangées max pour 5 ennemis
+	var cols: int = int((enemies_in_wave + rows - 1) / rows)
+	var row: int = int(index % rows)
+	var col: int = int(index / rows)
+	var offset_x: float = -(cols - 1) * enemy_spacing_x * 0.5
+	var offset_y: float = -80.0
+	var final_pos := Vector2(col * enemy_spacing_x + offset_x, row * enemy_spacing_y + offset_y)
+	
+	# Position de départ: hors écran à droite
+	enemy.position = Vector2(viewport_size.x + 150, final_pos.y)
+	enemy_container.add_child(enemy)
+	
+	# Créer le visuel
+	var visual := _create_enemy_visual(enemy)
+	enemy_visuals[enemy] = visual
+	
+	# Connecter les signaux
+	enemy.died.connect(_on_enemy_died.bind(enemy))
+	enemy.hp_changed.connect(_on_enemy_hp_changed.bind(enemy))
+	enemy.damaged.connect(_on_enemy_damaged.bind(enemy))
+	enemy.attacked.connect(_on_enemy_attacked.bind(enemy))
+	
+	active_enemies.append(enemy)
+	combat_manager.add_enemy(enemy)
+	
+	# COF-910: Animation slide-in depuis la droite avec délai selon index
+	var delay := index * 0.08
+	var slide_tween := create_tween()
+	slide_tween.set_ease(Tween.EASE_OUT)
+	slide_tween.set_trans(Tween.TRANS_BACK)
+	slide_tween.tween_interval(delay)
+	slide_tween.tween_property(enemy, "position", final_pos, 0.6)
 
 
 func _spawn_enemy(index: int) -> void:
@@ -1462,7 +1597,7 @@ func _create_ship_visual(ship: BaseEnemy) -> Control:
 	
 	var hp_fill := ColorRect.new()
 	hp_fill.name = "HPFill"
-	hp_fill.color = Color(0.5, 0.2, 0.8)  # Violet pour différencier
+	hp_fill.color = Color(0.9, 0.2, 0.2)  # COF-910: Rouge au lieu de violet
 	hp_fill.size = Vector2(hp_bar_width - 2, 3)
 	hp_fill.position = Vector2(-hp_bar_width / 2 + 1, -ship_size.y - 9)
 	visual.add_child(hp_fill)
@@ -1518,6 +1653,10 @@ func _on_ship_died(ship: BaseEnemy) -> void:
 		active_ships.erase(ship)
 	if ship in ship_visuals:
 		ship_visuals.erase(ship)
+	
+	# COF-910: Vérifier si vague terminée
+	if active_enemies.is_empty() and active_ships.is_empty():
+		_on_wave_cleared()
 
 
 func _on_ship_hp_changed(current_hp: int, max_hp: int, ship: BaseEnemy) -> void:
@@ -1553,6 +1692,31 @@ func _show_floating_text(text: String, pos: Vector2, color: Color, size: int = 2
 	tween.set_parallel(true)
 	tween.tween_property(label, "position:y", pos.y - 60, 0.8)
 	tween.tween_property(label, "modulate:a", 0.0, 0.8)
+	tween.chain().tween_callback(label.queue_free)
+
+
+## COF-910: Nouveau style de floating text optimisé pour les dégâts
+func _show_damage_text(text: String, pos: Vector2, color: Color, size: int = 24) -> void:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", color)
+	# COF-910: Ombre pour lisibilité
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	label.position = pos
+	label.z_index = 100
+	effects_layer.add_child(label)
+	
+	# COF-910: Animation: monte + grossit légèrement + fade out
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "position:y", pos.y - 50, 0.6).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "scale", Vector2(1.2, 1.2), 0.15)
+	tween.chain()
+	tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.tween_property(label, "modulate:a", 0.0, 0.35)
 	tween.chain().tween_callback(label.queue_free)
 
 
@@ -1708,15 +1872,20 @@ func _on_hero_healed(amount: int) -> void:
 	_show_floating_text("+%d" % amount, hero_pos, Color(0.3, 1.0, 0.5), 24)
 
 
+## COF-910: Dégâts reçus par le héros - affichés AU-DESSUS (pas devant HP bar)
 func _on_hero_damaged(amount: int, is_crit: bool) -> void:
 	_flash_entity(hero, Color(1.0, 0.3, 0.3))
-	var hero_pos := hero_container.position + Vector2(50, -30)
+	# COF-910: Position bien AU-DESSUS du héros (660 = hauteur sprite)
+	var hero_pos := hero_container.position + Vector2(0, -700)
 	var text := "-%d" % amount
+	var size := 24
 	if is_crit:
-		text += "!"
-	_show_floating_text(text, hero_pos, Color(1.0, 0.3, 0.3), 20)
+		text = "💥 -%d" % amount
+		size = 30
+	_show_damage_text(text, hero_pos, Color(1.0, 0.3, 0.3), size)
 
 
+## COF-910: Dégâts infligés aux ennemis - affichés AU-DESSUS d'eux
 func _on_enemy_damaged(amount: int, is_crit: bool, enemy: BaseEnemy) -> void:
 	if not is_instance_valid(enemy):
 		return
@@ -1730,14 +1899,18 @@ func _on_enemy_damaged(amount: int, is_crit: bool, enemy: BaseEnemy) -> void:
 	if is_instance_valid(enemy) and enemy.is_alive:
 		_set_enemy_sprite_pose(enemy, "standing")
 	
-	# Position relative à l'ennemi dans le container
-	var pos := enemy_container.position + enemy.position + Vector2(0, -100)
+	# COF-910: Position AU-DESSUS de l'ennemi (sprite_height ~330)
+	var pos := enemy_container.position + enemy.position + Vector2(0, -380)
+	
+	# Style amélioré
 	var text := "-%d" % amount
-	var color := Color(1.0, 1.0, 1.0)
+	var color := Color(1.0, 1.0, 0.0)  # Jaune par défaut
+	var size := 22
 	if is_crit:
-		text = "CRIT -%d" % amount
-		color = Color(1.0, 0.8, 0.0)
-	_show_floating_text(text, pos, color, 18)
+		text = "💥 %d" % amount
+		color = Color(1.0, 0.5, 0.0)  # Orange pour crit
+		size = 28
+	_show_damage_text(text, pos, color, size)
 	
 	# Update enemy HP bar
 	var hp_fill: ColorRect = enemy.get_node_or_null("EnemyVisual/HPFill")
@@ -1810,8 +1983,8 @@ func _on_enemy_died(enemy: BaseEnemy) -> void:
 	var reward_pos := enemy_container.position + enemy.position + Vector2(0, -60)
 	_show_floating_text("+%d SC" % reward, reward_pos, Color(1.0, 0.85, 0.3), 18)
 	
-	# Vérifier si vague terminée
-	if active_enemies.is_empty():
+	# COF-910: Vérifier si vague terminée (ennemis AU SOL + vaisseaux)
+	if active_enemies.is_empty() and active_ships.is_empty():
 		_on_wave_cleared()
 
 
@@ -1844,88 +2017,32 @@ func _on_wave_cleared() -> void:
 		state_machine.start_combat()
 
 
-## Affiche un titre de vague/boss centré en haut pendant 3 secondes
-func _show_wave_title(text: String, color: Color, is_boss: bool = false) -> void:
+## COF-910: Affiche un titre de vague/boss centré - simplifié, pas d'animation
+func _show_wave_title(text: String, color: Color, _is_boss: bool = false) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	
-	# Créer un panneau de fond
-	var panel := PanelContainer.new()
-	panel.name = "WaveTitle"
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.0, 0.0, 0.0, 0.85)
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.border_color = color
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	style.content_margin_left = 40
-	style.content_margin_right = 40
-	style.content_margin_top = 20
-	style.content_margin_bottom = 20
-	panel.add_theme_stylebox_override("panel", style)
-	
-	# Label du titre
+	# COF-910: Simple label centré à l'écran
 	var label := Label.new()
+	label.name = "WaveTitle"
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var font_size: int = 48 if is_boss else 42
-	label.add_theme_font_size_override("font_size", font_size)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 48)
 	label.add_theme_color_override("font_color", color)
-	panel.add_child(label)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	label.add_theme_constant_override("shadow_offset_x", 3)
+	label.add_theme_constant_override("shadow_offset_y", 3)
 	
-	# Sous-titre pour le boss
-	if is_boss:
-		var vbox := VBoxContainer.new()
-		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-		label.reparent(vbox)
-		
-		var sub_label := Label.new()
-		sub_label.text = "PREPARE FOR BATTLE!"
-		sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sub_label.add_theme_font_size_override("font_size", 24)
-		sub_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
-		vbox.add_child(sub_label)
-		
-		panel.add_child(vbox)
+	effects_layer.add_child(label)
 	
-	# Positionner au centre-haut
-	panel.position = Vector2(viewport_size.x * 0.5, viewport_size.y * 0.15)
-	panel.pivot_offset = panel.size * 0.5
-	effects_layer.add_child(panel)
-	
-	# Attendre que le panel soit dimensionné puis centrer
+	# Centrer après avoir ajouté au tree
 	await get_tree().process_frame
-	panel.position = Vector2((viewport_size.x - panel.size.x) * 0.5, viewport_size.y * 0.12)
+	label.position = Vector2((viewport_size.x - label.size.x) / 2, viewport_size.y / 2 - label.size.y / 2)
 	
-	# Animation d'apparition
-	panel.modulate.a = 0.0
-	panel.scale = Vector2(0.5, 0.5)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(panel, "modulate:a", 1.0, 0.3).set_ease(Tween.EASE_OUT)
-	tween.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	
-	# Pulsation pendant l'affichage
-	await tween.finished
-	var pulse_tween := create_tween().set_loops(3)
-	pulse_tween.tween_property(panel, "scale", Vector2(1.05, 1.05), 0.5).set_ease(Tween.EASE_IN_OUT)
-	pulse_tween.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.5).set_ease(Tween.EASE_IN_OUT)
-	
-	# Attendre selon le type - 1.5s pour les vagues, 3s pour les boss
-	var display_time: float = 3.0 if is_boss else 1.5
-	await get_tree().create_timer(display_time).timeout
-	
-	# Animation de disparition
-	pulse_tween.kill()
-	var fade_tween := create_tween()
-	fade_tween.set_parallel(true)
-	fade_tween.tween_property(panel, "modulate:a", 0.0, 0.4)
-	fade_tween.tween_property(panel, "scale", Vector2(1.2, 0.8), 0.4)
-	fade_tween.tween_property(panel, "position:y", panel.position.y - 30, 0.4)
-	await fade_tween.finished
-	panel.queue_free()
+	# COF-910: Attendre 1.5 secondes puis supprimer (pas d'animation)
+	await get_tree().create_timer(1.5).timeout
+	if is_instance_valid(label):
+		label.queue_free()
 
 
 func _apply_wave_bonus_to_hero() -> void:
@@ -2266,11 +2383,12 @@ func _on_replay_pressed() -> void:
 
 func _on_next_planet_pressed() -> void:
 	print("[NEXT] Button pressed!")
-	# Garder les coins gagnés (déjà sauvés)
 	# Passer à la planète suivante
 	if SaveManager:
 		SaveManager.advance_planet()
-	get_tree().reload_current_scene()
+	# Retourner à l'écran de sélection des planètes
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/ui/level_select.tscn")
 
 
 func _on_menu_pressed() -> void:
@@ -2557,7 +2675,7 @@ func _show_cinematic_slide() -> void:
 				var zyx_spacer := Control.new()
 				zyx_spacer.custom_minimum_size.y = 8
 				content_box.add_child(zyx_spacer)
-				push_warning("Portrait Zyx-7 invalide: %s" % portrait_path)
+				push_warning("Portrait Kryntar invalide: %s" % portrait_path)
 		else:
 			# Fallback emoji si le sprite du héros n'existe pas
 			var zyx_emoji := Label.new()
@@ -2569,7 +2687,7 @@ func _show_cinematic_slide() -> void:
 			var zyx_spacer2 := Control.new()
 			zyx_spacer2.custom_minimum_size.y = 8
 			content_box.add_child(zyx_spacer2)
-			push_warning("Portrait Zyx-7 introuvable: %s" % portrait_path)
+			push_warning("Portrait Kryntar introuvable: %s" % portrait_path)
 	
 	# Texte avec effet machine à écrire (toujours visible)
 	var text_label := Label.new()
@@ -2646,6 +2764,14 @@ func _end_cinematic() -> void:
 		cinematic_layer.queue_free()
 		cinematic_layer = null
 	
+	# Niveau secret : spawn les 4 boss en même temps
+	if is_secret_level:
+		await get_tree().create_timer(0.5).timeout
+		await _show_wave_title("💀 BOSS RUSH 💀", Color(0.8, 0.2, 0.2))
+		_spawn_secret_bosses()
+		state_machine.start_combat()
+		return
+	
 	# Démarrer le combat avec titre de vague 1
 	await get_tree().create_timer(0.5).timeout
 	await _show_wave_title("⚔️ WAVE 1 ⚔️", Color.WHITE)
@@ -2665,11 +2791,13 @@ func _spawn_boss() -> void:
 	if SaveManager:
 		highest_completed = SaveManager.get_highest_planet_completed()
 	
-	# Le boss scale aussi un peu avec la progression pour rester challengeant
-	var boss_hp_mult: float = 1.0 + (highest_completed + 1) * 0.1
+	# COF-910: Boss x5 HP et x5 ATK + scaling progression
+	var boss_hp_mult: float = COF910_BOSS_STATS_MULT + (highest_completed + 1) * 0.1
+	var boss_atk_mult: float = COF910_BOSS_STATS_MULT
 	# Dr. Mortis est BEAUCOUP plus dur
 	if is_final_boss:
 		boss_hp_mult *= 1.3
+		boss_atk_mult *= 1.3
 	
 	# Créer l'entité du boss
 	current_boss = BaseEnemy.new()
@@ -2678,9 +2806,12 @@ func _spawn_boss() -> void:
 	var boss_stats := EntityStats.new()
 	boss_stats.display_name = boss_data.name
 	boss_stats.max_hp = int(boss_data.hp * boss_hp_mult)
-	boss_stats.attack = boss_data.atk
+	boss_stats.attack = int(boss_data.atk * boss_atk_mult)
 	boss_stats.attack_speed = boss_data.speed
 	current_boss.base_stats = boss_stats
+	
+	# Positionner le boss au centre du container (relatif à enemy_container)
+	current_boss.position = Vector2(0, -120)  # Un peu au-dessus du centre
 	
 	# Ajouter au combat
 	enemy_container.add_child(current_boss)
@@ -2705,9 +2836,244 @@ func _spawn_boss() -> void:
 	print("[GameCombat] Boss spawned: %s with %d HP" % [boss_data.name, boss_stats.max_hp])
 
 
-func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
-	var is_final_boss: bool = current_planet == 3
+## Spawn UN boss pour le niveau secret (apparition un par un, x3 stats)
+func _spawn_secret_bosses() -> void:
+	# Réinitialiser à 0 au premier appel seulement
+	if secret_boss_index == 0 and secret_bosses_defeated == 0:
+		print("[SECRET] Starting Boss Rush - 4 bosses x3 stats!")
+	
+	_spawn_next_secret_boss()
+
+
+## Spawn le prochain boss du niveau secret
+func _spawn_next_secret_boss() -> void:
+	if secret_boss_index >= 4:
+		# Tous les boss ont été vaincus
+		print("[SECRET] All 4 bosses defeated!")
+		_on_secret_level_complete()
+		return
+	
+	is_boss_wave = true
+	var boss_data: Dictionary = PLANET_BOSSES[secret_boss_index]
+	
+	# Annonce du boss
+	var boss_names := ["MERCURY GUARDIAN", "VENUS QUEEN", "MARS WARLORD", "DR. MORTIS"]
+	await _show_wave_title("💀 BOSS %d/4: %s 💀" % [secret_boss_index + 1, boss_names[secret_boss_index]], boss_data.color)
+	
+	# Créer l'entité du boss
+	current_boss = BaseEnemy.new()
+	current_boss.name = "SecretBoss_%s" % boss_data.name.replace(" ", "_")
+	
+	var boss_stats := EntityStats.new()
+	boss_stats.display_name = boss_data.name
+	boss_stats.max_hp = int(boss_data.hp * 3.0)  # x3 HP!
+	boss_stats.attack = int(boss_data.atk * 3.0)  # x3 ATK!
+	boss_stats.attack_speed = boss_data.speed
+	current_boss.base_stats = boss_stats
+	
+	# Positionner le boss au centre (comme un boss normal)
+	current_boss.position = Vector2(0, -120)
+	
+	# Ajouter au combat
+	enemy_container.add_child(current_boss)
+	combat_manager.add_enemy(current_boss)
+	active_enemies.append(current_boss)
+	
+	# Visuel du boss (plus grand!)
+	_create_secret_boss_visual(current_boss, boss_data, secret_boss_index)
+	
+	# Connecter les signaux
+	current_boss.died.connect(_on_secret_boss_died.bind(current_boss))
+	current_boss.hp_changed.connect(_on_boss_hp_changed)
+	current_boss.attacked.connect(_on_boss_attacked.bind(current_boss))
+	current_boss.damaged.connect(_on_boss_damaged.bind(current_boss))
+	
+	print("[SECRET] Boss %d spawned: %s with %d HP, %d ATK (x3)" % [secret_boss_index + 1, boss_data.name, boss_stats.max_hp, boss_stats.attack])
+
+
+## Crée le visuel pour un boss du niveau secret (GRANDE TAILLE comme boss final)
+func _create_secret_boss_visual(boss: BaseEnemy, boss_data: Dictionary, index: int) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	# Taille plus grande - comme le boss final!
+	var base_size: int = mini(400, int(viewport_size.x * 0.55))  # 55% de la largeur
+	var size: int = int(base_size * 1.2)  # 20% plus grand encore
+	
+	var visual := Control.new()
+	visual.name = "SecretBossVisual_%d" % index
+	visual.custom_minimum_size = Vector2(size, size * 1.3)
+	visual.size = Vector2(size, size * 1.3)
+	# Centrer le visuel au-dessus du point du boss
+	visual.position = Vector2(-size / 2.0, -size * 1.3)
+	
+	# Stocker comme boss_visual pour la barre de vie
+	boss_visual = visual
+	
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	visual.add_child(vbox)
+	
+	# Titre du boss
+	var title := Label.new()
+	title.text = "💀 BOSS RUSH %d/4 💀" % (index + 1)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	vbox.add_child(title)
+	
+	# Animation du titre
+	var title_tween := create_tween().set_loops()
+	title_tween.tween_property(title, "modulate:a", 0.5, 0.5)
+	title_tween.tween_property(title, "modulate:a", 1.0, 0.5)
+	
+	# Chaque boss utilise le sprite de sa planète d'origine (index 0-3)
+	var boss_sprites: Dictionary = BOSS_SPRITES.get(index, BOSS_SPRITES.get(3, {}))
+	var sprite_path: String = boss_sprites.get("idle", "")
+	
+	if ResourceLoader.exists(sprite_path):
+		# Utiliser le sprite du boss
+		var sprite_container := CenterContainer.new()
+		var sprite := TextureRect.new()
+		sprite.name = "BossSprite"
+		sprite.texture = load(sprite_path)
+		sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		sprite.custom_minimum_size = Vector2(size * 0.85, size * 0.85)
+		sprite_container.add_child(sprite)
+		vbox.add_child(sprite_container)
+		
+		# Stocker les sprites pour animations
+		boss.set_meta("sprite_idle", sprite_path)
+		boss.set_meta("sprite_attacking", boss_sprites.get("attacking", sprite_path))
+		boss.set_meta("sprite_hurt", boss_sprites.get("hurt", sprite_path))
+		
+		# Animation de pulsation menaçante
+		var pulse_tween := create_tween().set_loops()
+		pulse_tween.tween_property(sprite, "scale", Vector2(1.1, 1.1), 0.7).set_trans(Tween.TRANS_SINE)
+		pulse_tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.7).set_trans(Tween.TRANS_SINE)
+	else:
+		# Emoji du boss pour les autres
+		var emoji := Label.new()
+		emoji.name = "BossEmoji"
+		emoji.text = boss_data.emoji
+		emoji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		emoji.add_theme_font_size_override("font_size", 72)  # Plus grand!
+		vbox.add_child(emoji)
+		
+		# Animation de pulsation
+		var pulse_tween := create_tween().set_loops()
+		pulse_tween.tween_property(emoji, "scale", Vector2(1.15, 1.15), 0.6).set_trans(Tween.TRANS_SINE)
+		pulse_tween.tween_property(emoji, "scale", Vector2(1.0, 1.0), 0.6).set_trans(Tween.TRANS_SINE)
+	
+	# Nom du boss
+	var name_label := Label.new()
+	name_label.text = boss_data.name
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 11)
+	name_label.add_theme_color_override("font_color", boss_data.color)
+	name_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	name_label.add_theme_constant_override("outline_size", 2)
+	vbox.add_child(name_label)
+	
+	# Barre de vie
+	var hp_bar := ProgressBar.new()
+	hp_bar.name = "BossHPBar"
+	hp_bar.custom_minimum_size = Vector2(size, 12)
+	hp_bar.max_value = boss.base_stats.max_hp
+	hp_bar.value = boss.base_stats.max_hp
+	hp_bar.show_percentage = false
+	
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = boss_data.color
+	fill_style.set_corner_radius_all(4)
+	hp_bar.add_theme_stylebox_override("fill", fill_style)
+	
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.1, 0.1, 0.1, 0.95)
+	bg_style.border_color = boss_data.color
+	bg_style.set_border_width_all(2)
+	bg_style.set_corner_radius_all(4)
+	hp_bar.add_theme_stylebox_override("background", bg_style)
+	vbox.add_child(hp_bar)
+	
+	# Ajouter le visuel comme enfant du boss (position déjà définie plus haut)
+	boss.add_child(visual)
+	enemy_visuals[boss] = visual
+	
+	# Animation d'apparition
+	visual.modulate.a = 0
+	visual.scale = Vector2(0.5, 0.5)
+	var appear_tween := create_tween()
+	appear_tween.set_parallel(true)
+	appear_tween.tween_property(visual, "modulate:a", 1.0, 0.5).set_delay(index * 0.15)
+	appear_tween.tween_property(visual, "scale", Vector2(1.0, 1.0), 0.4).set_delay(index * 0.15).set_trans(Tween.TRANS_BACK)
+
+
+## Quand un boss du niveau secret meurt
+func _on_secret_boss_died(boss: BaseEnemy) -> void:
+	print("[SECRET] Boss died: %s" % boss.name)
+	
+	# Récompense
+	var reward: int = int(ENEMY_KILL_REWARD * 20)  # x20 récompense par boss
+	coins_earned_this_run += reward
+	_update_currency_display()
+	
+	if SaveManager:
+		SaveManager.add_currency(reward)
+	
+	# Animation de mort
+	if enemy_visuals.has(boss):
+		var visual: Control = enemy_visuals[boss]
+		var tween := create_tween()
+		tween.tween_property(visual, "modulate:a", 0.0, 0.5)
+		tween.tween_callback(visual.queue_free)
+		enemy_visuals.erase(boss)
+	
+	# Aussi nettoyer boss_visual si c'est le boss actuel
+	if boss_visual:
+		boss_visual = null
+	
+	# Retirer des listes
+	active_enemies.erase(boss)
+	combat_manager.remove_enemy(boss)
+	current_boss = null
+	
+	# Incrémenter les compteurs
+	secret_bosses_defeated += 1
+	secret_boss_index += 1
+	
+	# Vérifier si tous les boss sont morts (4 au total)
+	if secret_bosses_defeated >= 4:
+		print("[SECRET] All 4 bosses defeated! Victory!")
+		_on_secret_level_complete()
+	else:
+		# Spawn le prochain boss après un délai
+		print("[SECRET] Boss %d/4 defeated, spawning next..." % secret_bosses_defeated)
+		await get_tree().create_timer(1.5).timeout
+		_spawn_next_secret_boss()
+
+
+## Victoire du niveau secret
+func _on_secret_level_complete() -> void:
+	is_game_over = true
+	state_machine.transition_to("victory")
+	
+	# Bonus de victoire énorme
+	var victory_bonus: int = VICTORY_BONUS * 10
+	coins_earned_this_run += victory_bonus
+	if SaveManager:
+		SaveManager.add_currency(victory_bonus)
+	
+	await get_tree().create_timer(1.0).timeout
+	_show_game_over_screen(true)
+
+
+func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
+	var is_final_boss: bool = current_planet == 3 or current_planet == 4  # Earth OU niveau secret
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	
+	print("[DEBUG] Creating boss visual - Planet: %d, is_final_boss: %s, boss_name: %s" % [current_planet, is_final_boss, boss_data.name])
 	
 	var visual := Control.new()
 	visual.name = "BossVisual"
@@ -2739,27 +3105,37 @@ func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
 		title_tween.tween_property(title, "modulate:a", 0.5, 0.5)
 		title_tween.tween_property(title, "modulate:a", 1.0, 0.5)
 	
-	# Sprite du mini-boss OU emoji pour le boss final
-	var sprite_path: String = MINIBOSS_SPRITES.get("idle", "")
-	if not is_final_boss and ResourceLoader.exists(sprite_path):
-		# Utiliser le sprite du mini-boss
+	# Sprite du boss spécifique à la planète
+	var boss_sprites: Dictionary = BOSS_SPRITES.get(current_planet, {})
+	var sprite_path: String = boss_sprites.get("idle", "")
+	print("[DEBUG] Planet: %d, Sprite path: %s" % [current_planet, sprite_path])
+	
+	if ResourceLoader.exists(sprite_path):
+		print("[DEBUG] Loading sprite from: %s" % sprite_path)
+		# Utiliser le sprite
 		var sprite_container := CenterContainer.new()
 		var sprite := TextureRect.new()
 		sprite.name = "BossSprite"
 		sprite.texture = load(sprite_path)
 		sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		var sprite_size := int(base_size * 0.8)
+		var sprite_size := int(base_size * 0.85) if is_final_boss else int(base_size * 0.8)
 		sprite.custom_minimum_size = Vector2(sprite_size, sprite_size)
 		sprite_container.add_child(sprite)
 		vbox.add_child(sprite_container)
 		
 		# Stocker les textures pour animation
 		boss.set_meta("sprite_idle", sprite_path)
-		boss.set_meta("sprite_screaming", MINIBOSS_SPRITES.get("screaming", sprite_path))
-		boss.set_meta("sprite_fireball", MINIBOSS_SPRITES.get("fireball", sprite_path))
+		boss.set_meta("sprite_attacking", boss_sprites.get("attacking", sprite_path))
+		boss.set_meta("sprite_hurt", boss_sprites.get("hurt", sprite_path))
+		
+		# Animation de pulsation pour Dr. Mortis
+		if is_final_boss:
+			var pulse_tween := create_tween().set_loops()
+			pulse_tween.tween_property(sprite, "scale", Vector2(1.05, 1.05), 1.0).set_trans(Tween.TRANS_SINE)
+			pulse_tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 1.0).set_trans(Tween.TRANS_SINE)
 	else:
-		# Emoji du boss (pour boss final ou fallback)
+		# Emoji du boss (fallback si pas de sprite)
 		var emoji := Label.new()
 		emoji.name = "BossEmoji"
 		emoji.text = boss_data.emoji
@@ -2827,11 +3203,9 @@ func _create_boss_visual(boss: BaseEnemy, boss_data: Dictionary) -> void:
 		hp_text.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		vbox.add_child(hp_text)
 	
-	# Positionner le boss à y = 0.55 du viewport (aligné avec héros/ennemis)
-	visual.position = Vector2(
-		(viewport_size.x * 0.5) - (visual.size.x * 0.5),
-		(viewport_size.y * 0.55) - (visual.size.y * 0.5)
-	)
+	# Positionner le visuel centré au-dessus du point (0,0) du boss
+	# Le boss est dans enemy_container, on centre juste le visuel
+	visual.position = Vector2(-base_size * size_mult / 2, -base_size * size_mult * 1.1)
 	boss.add_child(visual)
 	
 	enemy_visuals[boss] = visual
@@ -2976,11 +3350,13 @@ func _on_boss_hp_changed(current_hp: int, max_hp: int) -> void:
 		_on_enemy_hp_changed(current_hp, max_hp, current_boss)
 
 
-## Appelé quand le boss attaque - change son sprite en pose "screaming"
+## COF-910: Appelé quand le boss attaque - alterne aléatoirement entre les 2 sprites d'attaque
 func _on_boss_attacked(_target: BaseEntity, _damage: int, _is_crit: bool, boss: BaseEnemy) -> void:
 	if not is_instance_valid(boss):
 		return
-	_set_boss_sprite_pose(boss, "screaming")
+	# COF-910: Choisir aléatoirement attack_1 ou attack_2
+	var attack_pose: String = "attack_1" if randf() > 0.5 else "attack_2"
+	_set_boss_sprite_pose(boss, attack_pose)
 	# Revenir à idle après un court délai
 	await get_tree().create_timer(0.4).timeout
 	if is_instance_valid(boss) and boss.is_alive:
@@ -3011,8 +3387,9 @@ func _set_boss_sprite_pose(boss: BaseEnemy, pose: String) -> void:
 	
 	var sprite_path: String = boss.get_meta("sprite_" + pose, "")
 	if sprite_path.is_empty() or not ResourceLoader.exists(sprite_path):
-		# Essayer depuis la config globale
-		sprite_path = MINIBOSS_SPRITES.get(pose, "")
+		# Essayer depuis la config globale de la planète
+		var boss_sprites: Dictionary = BOSS_SPRITES.get(current_planet, {})
+		sprite_path = boss_sprites.get(pose, "")
 	
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		sprite.texture = load(sprite_path)

@@ -9,7 +9,7 @@ extends Control
 
 const LEVEL_SELECT_SCENE := "res://scenes/ui/level_select.tscn"
 const BACKGROUND_PATH := "res://assets/backgrounds/background-menu-selection.png"
-const HERO_SPRITE_PATH := "res://assets/sprites/hero/hero_idle.png"
+const HERO_SPRITE_PATH := "res://assets/sprites/hero/alien-stand.png"
 
 ## Couleurs Sci-Fi Néon
 const COLOR_BLACK_DEEP := Color("#0A0A0F")
@@ -104,7 +104,7 @@ const UPGRADES_CONFIG := {
 	}
 }
 
-## Données des équipements (avec images)
+## Données des équipements (avec images) - incluant tous les gacha
 const EQUIPMENT_DATA := {
 	"weapon": {"title": "ARMES", "icon": "⚔️", "items": [
 		# Shop items
@@ -112,17 +112,18 @@ const EQUIPMENT_DATA := {
 		{"id": "sword_flame", "name": "Pistolet Puissant", "bonus": "+12 DMG", "bonus_value": 12, "stat": "attack_power", "image": "res://assets/sprites/ui/équipements/armes/pistolet plus fort.png"},
 		{"id": "sword_cosmic", "name": "Pistolet Royal", "bonus": "+25 DMG", "bonus_value": 25, "stat": "attack_power", "image": "res://assets/sprites/ui/équipements/armes/pistolet royal.png"},
 		# Gacha Common
-		{"id": "sword_iron", "name": "Iron Blade", "bonus": "+3 DMG", "bonus_value": 3, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_iron.png"},
-		{"id": "sword_steel", "name": "Steel Sword", "bonus": "+4 DMG", "bonus_value": 4, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_steel.png"},
-		{"id": "sword_bronze", "name": "Bronze Cutter", "bonus": "+5 DMG", "bonus_value": 5, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/weapons/common/sword_bronze.png"},
+		{"id": "sword_simple", "name": "Épée Simple", "bonus": "+3 ATT", "bonus_value": 3, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/épée-simple.png"},
+		{"id": "sword_angelique", "name": "Épée Angélique", "bonus": "+4 ATT", "bonus_value": 4, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/épées-angelique.png"},
+		{"id": "sword_corne", "name": "Épée Corne", "bonus": "+5 ATT", "bonus_value": 5, "stat": "attack_power", "rarity": "common", "image": "res://assets/sprites/equipment/épées-corne.png"},
 		# Gacha Rare
-		{"id": "sword_crystal", "name": "Crystal Edge", "bonus": "+8 DMG", "bonus_value": 8, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_crystal.png"},
-		{"id": "sword_thunder", "name": "Thunder Blade", "bonus": "+10 DMG", "bonus_value": 10, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_thunder.png"},
-		{"id": "sword_frost", "name": "Frost Fang", "bonus": "+12 DMG", "bonus_value": 12, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/weapons/rare/sword_frost.png"},
+		{"id": "sword_emeraude", "name": "Épée Émeraude", "bonus": "+8 ATT", "bonus_value": 8, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/épées-emeraude.png"},
+		{"id": "sword_flamme", "name": "Épée Flamme", "bonus": "+10 ATT", "bonus_value": 10, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/épées-flamme.png"},
+		{"id": "sword_glace", "name": "Épée Glace", "bonus": "+12 ATT", "bonus_value": 12, "stat": "attack_power", "rarity": "rare", "image": "res://assets/sprites/equipment/épées-glace.png"},
 		# Gacha Legendary
-		{"id": "sword_dragon", "name": "Dragon Slayer", "bonus": "+18 DMG", "bonus_value": 18, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_dragon.png"},
-		{"id": "sword_void", "name": "Void Reaper", "bonus": "+22 DMG", "bonus_value": 22, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_void.png"},
-		{"id": "sword_divine", "name": "Divine Excalibur", "bonus": "+28 DMG", "bonus_value": 28, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/weapons/legendary/sword_divine.png"}
+		{"id": "sword_onyx", "name": "Épée Onyx", "bonus": "+18 ATT", "bonus_value": 18, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-onyx.png"},
+		{"id": "sword_turboglace", "name": "Épée TurboGlace", "bonus": "+22 ATT", "bonus_value": 22, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-turboglace.png"},
+		{"id": "sword_turbolegendaire", "name": "Épée TurboLégendaire", "bonus": "+28 ATT", "bonus_value": 28, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-turbolegendaire.png"},
+		{"id": "sword_turboonyx", "name": "Épée TurboOnyx", "bonus": "+32 ATT", "bonus_value": 32, "stat": "attack_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/épées-turboonyx.png"}
 	]},
 	"armor": {"title": "ARMURES", "icon": "🛡️", "items": [
 		# Shop items
@@ -130,17 +131,18 @@ const EQUIPMENT_DATA := {
 		{"id": "armor_shadow", "name": "Armure Renforcée", "bonus": "+10% ESQ", "bonus_value": 10, "stat": "dodge_chance", "image": "res://assets/sprites/ui/équipements/armures/armure_plus_fort.png"},
 		{"id": "armor_cosmic", "name": "Armure Royale", "bonus": "+18% ESQ", "bonus_value": 18, "stat": "dodge_chance", "image": "res://assets/sprites/ui/équipements/armures/armure royal.png"},
 		# Gacha Common
-		{"id": "armor_leather", "name": "Leather Vest", "bonus": "+3% ESQ", "bonus_value": 3, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_leather.png"},
-		{"id": "armor_chainmail", "name": "Chainmail", "bonus": "+4% ESQ", "bonus_value": 4, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_chainmail.png"},
-		{"id": "armor_iron", "name": "Iron Plate", "bonus": "+5% ESQ", "bonus_value": 5, "stat": "dodge_chance", "rarity": "common", "image": "res://assets/sprites/equipment/armors/common/armor_iron.png"},
+		{"id": "armor_fer", "name": "Armure Fer", "bonus": "+3 DEF", "bonus_value": 3, "stat": "defense", "rarity": "common", "image": "res://assets/sprites/equipment/armures-fer.png"},
+		{"id": "armor_cool", "name": "Armure Cool", "bonus": "+4 DEF", "bonus_value": 4, "stat": "defense", "rarity": "common", "image": "res://assets/sprites/equipment/armures-cool.png"},
+		{"id": "armor_nul", "name": "Armure Nul", "bonus": "+5 DEF", "bonus_value": 5, "stat": "defense", "rarity": "common", "image": "res://assets/sprites/equipment/armures-nul.png"},
 		# Gacha Rare
-		{"id": "armor_crystal", "name": "Crystal Guard", "bonus": "+8% ESQ", "bonus_value": 8, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_crystal.png"},
-		{"id": "armor_thunder", "name": "Storm Armor", "bonus": "+10% ESQ", "bonus_value": 10, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_thunder.png"},
-		{"id": "armor_frost", "name": "Frost Mail", "bonus": "+12% ESQ", "bonus_value": 12, "stat": "dodge_chance", "rarity": "rare", "image": "res://assets/sprites/equipment/armors/rare/armor_frost.png"},
+		{"id": "armor_ninja", "name": "Armure Ninja", "bonus": "+8 DEF", "bonus_value": 8, "stat": "defense", "rarity": "rare", "image": "res://assets/sprites/equipment/armures-ninja.png"},
+		{"id": "armor_rouge", "name": "Armure Rouge", "bonus": "+10 DEF", "bonus_value": 10, "stat": "defense", "rarity": "rare", "image": "res://assets/sprites/equipment/armures-rouge.png"},
+		{"id": "armor_pasdingue", "name": "Armure PasDingue", "bonus": "+12 DEF", "bonus_value": 12, "stat": "defense", "rarity": "rare", "image": "res://assets/sprites/equipment/armures-pasdingue.png"},
 		# Gacha Legendary
-		{"id": "armor_dragon", "name": "Dragon Scale", "bonus": "+16% ESQ", "bonus_value": 16, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_dragon.png"},
-		{"id": "armor_void", "name": "Void Shroud", "bonus": "+20% ESQ", "bonus_value": 20, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_void.png"},
-		{"id": "armor_divine", "name": "Divine Aegis", "bonus": "+25% ESQ", "bonus_value": 25, "stat": "dodge_chance", "rarity": "legendary", "image": "res://assets/sprites/equipment/armors/legendary/armor_divine.png"}
+		{"id": "armor_onyx", "name": "Armure Onyx", "bonus": "+16 DEF", "bonus_value": 16, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-onyx.png"},
+		{"id": "armor_gold", "name": "Armure Gold", "bonus": "+20 DEF", "bonus_value": 20, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-gold.png"},
+		{"id": "armor_arcenciel", "name": "Armure Arcenciel", "bonus": "+25 DEF", "bonus_value": 25, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-arcenciel.png"},
+		{"id": "armor_spatial", "name": "Armure Spatiale", "bonus": "+30 DEF", "bonus_value": 30, "stat": "defense", "rarity": "legendary", "image": "res://assets/sprites/equipment/armures-spatial.png"}
 	]},
 	"helmet": {"title": "CASQUES", "icon": "⛑️", "items": [
 		# Shop items
@@ -148,17 +150,15 @@ const EQUIPMENT_DATA := {
 		{"id": "helmet_nature", "name": "Casque Renforcé", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "image": "res://assets/sprites/ui/équipements/casques/casque plus fort.png"},
 		{"id": "helmet_cosmic", "name": "Casque Royal", "bonus": "+15 SOIN", "bonus_value": 15, "stat": "heal_power", "image": "res://assets/sprites/ui/équipements/casques/casque royal.png"},
 		# Gacha Common
-		{"id": "helmet_leather", "name": "Leather Cap", "bonus": "+2 SOIN", "bonus_value": 2, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_leather.png"},
-		{"id": "helmet_iron", "name": "Iron Helm", "bonus": "+3 SOIN", "bonus_value": 3, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_iron.png"},
-		{"id": "helmet_steel", "name": "Steel Visor", "bonus": "+4 SOIN", "bonus_value": 4, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/helmets/common/helmet_steel.png"},
+		{"id": "helmet_basique", "name": "Casque Basique", "bonus": "+2 SOIN", "bonus_value": 2, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/casques-basique.png"},
+		{"id": "helmet_fer", "name": "Casque Fer", "bonus": "+3 SOIN", "bonus_value": 3, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/casques-fer.png"},
+		{"id": "helmet_nul", "name": "Casque Nul", "bonus": "+4 SOIN", "bonus_value": 4, "stat": "heal_power", "rarity": "common", "image": "res://assets/sprites/equipment/casques-nul.png"},
 		# Gacha Rare
-		{"id": "helmet_crystal", "name": "Crystal Crown", "bonus": "+6 SOIN", "bonus_value": 6, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_crystal.png"},
-		{"id": "helmet_thunder", "name": "Storm Hood", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_thunder.png"},
-		{"id": "helmet_frost", "name": "Frost Helm", "bonus": "+10 SOIN", "bonus_value": 10, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/helmets/rare/helmet_frost.png"},
+		{"id": "helmet_flamme", "name": "Casque Flamme", "bonus": "+6 SOIN", "bonus_value": 6, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/casques-flamme.png"},
+		{"id": "helmet_futur", "name": "Casque Futur", "bonus": "+8 SOIN", "bonus_value": 8, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/casques-futur.png"},
+		{"id": "helmet_verre", "name": "Casque Verre", "bonus": "+10 SOIN", "bonus_value": 10, "stat": "heal_power", "rarity": "rare", "image": "res://assets/sprites/equipment/casques-verre.png"},
 		# Gacha Legendary
-		{"id": "helmet_dragon", "name": "Dragon Horns", "bonus": "+14 SOIN", "bonus_value": 14, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_dragon.png"},
-		{"id": "helmet_void", "name": "Void Mask", "bonus": "+18 SOIN", "bonus_value": 18, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_void.png"},
-		{"id": "helmet_divine", "name": "Divine Halo", "bonus": "+22 SOIN", "bonus_value": 22, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/helmets/legendary/helmet_divine.png"}
+		{"id": "helmet_halo", "name": "Casque Halo", "bonus": "+14 SOIN", "bonus_value": 14, "stat": "heal_power", "rarity": "legendary", "image": "res://assets/sprites/equipment/casques-halo.png"}
 	]}
 }
 
@@ -1246,7 +1246,7 @@ func _calculate_player_power() -> int:
 	# Bonus des upgrades
 	for upgrade_id in UPGRADES_CONFIG:
 		var level := SaveManager.get_upgrade_level(upgrade_id)
-		var per_level: int = int(UPGRADES_CONFIG[upgrade_id]["per_level"] * 0.8)
+		var per_level: int = UPGRADES_CONFIG[upgrade_id]["per_level"]
 		power += level * per_level
 	
 	# Bonus des équipements équipés

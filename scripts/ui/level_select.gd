@@ -718,6 +718,9 @@ func _input(event: InputEvent) -> void:
 						current_index += 1
 						_update_carousel_positions(true)
 						_update_planet_info_display()
+				else:
+					# C'est un tap, pas un swipe - vérifier si on clique sur Coming Soon
+					_check_secret_level_tap(touch_event.position)
 			is_swiping = false
 	
 	# Support souris pour debug PC
@@ -739,7 +742,53 @@ func _input(event: InputEvent) -> void:
 							current_index += 1
 							_update_carousel_positions(true)
 							_update_planet_info_display()
+					else:
+						# C'est un clic, pas un swipe - vérifier si on clique sur Coming Soon
+						_check_secret_level_tap(mouse_event.position)
 				is_swiping = false
+
+
+## Vérifie si on clique sur la planète "Coming Soon" avec Earth terminée
+func _check_secret_level_tap(tap_position: Vector2) -> void:
+	# Vérifier que la planète centrale est "Coming Soon"
+	var info: Dictionary = PLANETS_INFO[current_index]
+	if not info.get("is_coming_soon", false):
+		return
+	
+	# Vérifier que Earth (planète 3) est terminée
+	if _get_highest_completed() < 3:
+		return
+	
+	# Vérifier que le tap est sur la planète centrale
+	if planet_nodes.is_empty() or current_index >= planet_nodes.size():
+		return
+	
+	var planet_node: Control = planet_nodes[current_index]
+	var planet_rect := Rect2(planet_node.global_position, planet_node.size * planet_node.scale)
+	
+	if planet_rect.has_point(tap_position):
+		# Lancer le niveau secret !
+		_start_secret_level()
+
+
+## Lance le niveau secret (4 boss x2)
+func _start_secret_level() -> void:
+	print("[SECRET] Starting secret boss rush level!")
+	
+	# Marquer le niveau secret dans SaveManager
+	if SaveManager:
+		SaveManager.set_current_planet(4)  # Index 4 = niveau secret
+	
+	# Animation de feedback
+	var planet_node: Control = planet_nodes[current_index]
+	var tween := create_tween()
+	tween.tween_property(planet_node, "modulate", Color(1.5, 0.5, 0.5), 0.15)
+	tween.tween_property(planet_node, "modulate", Color.WHITE, 0.15)
+	
+	await get_tree().create_timer(0.3).timeout
+	
+	# Charger la scène de combat
+	get_tree().change_scene_to_file(COMBAT_SCENE)
 
 
 func _animate_button(button: Button) -> void:

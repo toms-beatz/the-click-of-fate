@@ -395,7 +395,7 @@ func get_highest_planet_completed() -> int:
 
 ## Définit la planète actuelle (pour la sélection de niveau)
 func set_current_planet(planet_index: int) -> void:
-	data["current_planet"] = clampi(planet_index, 0, 3)
+	data["current_planet"] = clampi(planet_index, 0, 4)  # 0-3 normal, 4 = secret level
 	data["current_wave"] = 0  # Reset à la première vague
 	progression_changed.emit()
 	save_game()
